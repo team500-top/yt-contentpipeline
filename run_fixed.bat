@@ -1,26 +1,10 @@
 @echo off
-chcp 65001 >nul
-title YouTube Analyzer - Fixed Version
+cd /d C:\youtube-analyzer
 
-cd /d "%~dp0"
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
 
-if exist "venv\Scripts\activate.bat" (
-    call venv\Scripts\activate.bat
-) else (
-    echo Creating virtual environment...
-    python -m venv venv
-    call venv\Scripts\activate.bat
-    pip install -r requirements.txt
-)
-
-cls
-echo =======================================
-echo    YouTube Analyzer - Fixed Version
-echo =======================================
-echo.
 echo Starting fixed server...
-echo.
-
-python backend/fixed_server.py
+python backend/main_fixed.py
 
 pause

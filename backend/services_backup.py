@@ -52,29 +52,26 @@ CHECKPOINT_INTERVAL = 300  # Создавать чекпоинт каждые 5 
 
 # Загрузка активных задач при старте
 def load_active_tasks():
-    """Загрузить активные задачи из БД с восстановлением состояния"""
+"""Загрузить активные задачи из БД с восстановлением состояния"""
     pass
-pass
 global active_tasks
 try:
-except Exception:
-    pass
-tasks = db.get_all_tasks()
-for task in tasks:
-    if task['status'] in ['running', 'paused', 'created']:
-        active_tasks[task['task_id']] = task
+    tasks = db.get_all_tasks()
+    for task in tasks:
+        if task['status'] in ['running', 'paused', 'created']:
+            active_tasks[task['task_id']] = task
 
-        # Восстановить чекпоинт если есть
-        checkpoint = db.get_task_checkpoint(task['task_id'])
-        if checkpoint:
-            active_tasks[task['task_id']]['checkpoint'] = checkpoint
+            # Восстановить чекпоинт если есть
+            checkpoint = db.get_task_checkpoint(task['task_id'])
+            if checkpoint:
+                active_tasks[task['task_id']]['checkpoint'] = checkpoint
 
-            print(f"✅ Загружено {len(active_tasks)} активных задач")
-            except Exception as e:
-        print(f"❌ Ошибка загрузки задач: {e}")
+                print(f"✅ Загружено {len(active_tasks)} активных задач")
+        except Exception as e:
+    print(f"❌ Ошибка загрузки задач: {e}")
 
     # Загрузить при импорте
-    load_active_tasks()
+load_active_tasks()
 
 # ============ ENHANCED ANALYSIS FUNCTIONS ============
 
@@ -108,8 +105,8 @@ video_data['contacts_in_video'] = emails[:5]  # Максимум 5
 # SEO оценка (0-100)
 seo_score = 0
 if video_data.get('tags') and len(video_data['tags']) > 5:
-seo_score += 20
-if video_data['description_length'] > 200:
+    seo_score += 20
+    if video_data['description_length'] > 200:
     seo_score += 20
     if video_data.get('has_cc'):
     seo_score += 20
@@ -151,21 +148,21 @@ if video_data['description_length'] > 200:
     title_lower = title.lower()
     for category, keywords in categories.items():
     if any(keyword in title_lower for keyword in keywords):
-    detected_category = category
-    break
+        detected_category = category
+        break
 
-video_data['video_category'] = detected_category
+    video_data['video_category'] = detected_category
 
-# Генерация рекомендаций по улучшению
-improvements = []
+    # Генерация рекомендаций по улучшению
+    improvements = []
 
 if not video_data.get('has_cc'):
-improvements.append("Добавьте субтитры для увеличения охвата")
+    improvements.append("Добавьте субтитры для увеличения охвата")
 
-if video_data['engagement_rate'] < 2:
+    if video_data['engagement_rate'] < 2:
     improvements.append("Низкая вовлеченность - улучшите заголовок и превью")
 
-if video_data['description_length'] < 100:
+    if video_data['description_length'] < 100:
     improvements.append("Слишком короткое описание - добавьте больше деталей и ключевых слов")
 
     if not video_data.get('tags') or len(video_data['tags']) < 5:
@@ -189,7 +186,7 @@ if video_data['description_length'] < 100:
     strategy_parts.append("Shorts формат работает хорошо - продолжайте")
     else:
     if video_data.get('duration_seconds', 0) > 600:
-    strategy_parts.append("Рассмотрите создание коротких версий для Shorts")
+        strategy_parts.append("Рассмотрите создание коротких версий для Shorts")
 
     if video_data['engagement_rate'] > 5:
     strategy_parts.append("Высокая вовлеченность - изучите и повторите успешные элементы")
@@ -204,17 +201,17 @@ if video_data['description_length'] < 100:
     # $1-3 за 1000 просмотров в среднем
     cpm = 2.0  # Средний CPM
     if detected_category in ['education', 'tech']:
-    cpm = 3.0
-    elif detected_category in ['gaming', 'entertainment']:
-    cpm = 1.5
+        cpm = 3.0
+        elif detected_category in ['gaming', 'entertainment']:
+        cpm = 1.5
 
-    estimated_revenue = (video_data['views'] / 1000) * cpm
-    video_data['estimated_revenue'] = round(estimated_revenue, 2)
+        estimated_revenue = (video_data['views'] / 1000) * cpm
+        video_data['estimated_revenue'] = round(estimated_revenue, 2)
 
-    return video_data
+        return video_data
 
     async def analyze_channel_extended(channel_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Расширенный анализ канала"""
+"""Расширенный анализ канала"""
 
 channel_id = channel_data['channel_id']
 
@@ -224,21 +221,21 @@ channel_data['upload_frequency'] = round(upload_frequency, 2)
 
 # Определить тип канала
 if channel_data.get('video_count', 0) > 100:
-channel_data['channel_type'] = 'media'
-elif channel_data.get('subscriber_count', 0) > 100000:
-channel_data['channel_type'] = 'brand'
-else:
-channel_data['channel_type'] = 'personal'
+    channel_data['channel_type'] = 'media'
+    elif channel_data.get('subscriber_count', 0) > 100000:
+    channel_data['channel_type'] = 'brand'
+    else:
+    channel_data['channel_type'] = 'personal'
 
-# Оценка роста (приблизительно)
-if upload_frequency > 0:
+    # Оценка роста (приблизительно)
+    if upload_frequency > 0:
     # Предполагаем рост на основе частоты загрузок и вовлеченности
     growth_factor = upload_frequency * 0.1
     if channel_data.get('avg_engagement_rate', 0) > 5:
-    growth_factor *= 1.5
-    channel_data['growth_rate'] = round(growth_factor, 2)
+        growth_factor *= 1.5
+        channel_data['growth_rate'] = round(growth_factor, 2)
 
-    # Примерная оценка месячного дохода
+        # Примерная оценка месячного дохода
     if channel_data.get('avg_views', 0) > 0 and upload_frequency > 0:
     monthly_views = channel_data['avg_views'] * upload_frequency
     cpm = 2.0  # Средний CPM
@@ -252,10 +249,8 @@ if upload_frequency > 0:
 async def get_tasks():
 """Получить список всех задач"""
 try:
-except Exception:
-    pass
-tasks = db.get_all_tasks()
-return tasks
+    tasks = db.get_all_tasks()
+    return tasks
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения задач: {str(e)}")
 
@@ -271,40 +266,38 @@ return {
 async def create_task(task: TaskCreate, background_tasks: BackgroundTasks):
 """Создать новую задачу анализа"""
 try:
+    # Валидация
+    if not task.keywords and not task.channels:
+        raise HTTPException(status_code=400, detail="Укажите ключевые слова или каналы")
+
 except Exception:
     pass
-# Валидация
-if not task.keywords and not task.channels:
-    raise HTTPException(status_code=400, detail="Укажите ключевые слова или каналы")
-
-except Exception:
-pass
 if not youtube_parser:
-raise HTTPException(status_code=400, detail="YouTube API ключ не настроен")
+    raise HTTPException(status_code=400, detail="YouTube API ключ не настроен")
 
-# Создание задачи
-task_id = str(uuid.uuid4())
-total_items = len(task.keywords) + len(task.channels)
+    # Создание задачи
+    task_id = str(uuid.uuid4())
+    total_items = len(task.keywords) + len(task.channels)
 
-task_data = {
-"task_id": task_id,
-"status": "created",
-"progress": 0,
-"total_items": total_items,
-"created_at": datetime.now().isoformat(),
-"config": task.dict(),
-"items_processed": [],
-"items_failed": []
-}
+    task_data = {
+    "task_id": task_id,
+    "status": "created",
+    "progress": 0,
+    "total_items": total_items,
+    "created_at": datetime.now().isoformat(),
+    "config": task.dict(),
+    "items_processed": [],
+    "items_failed": []
+    }
 
-# Сохранить в БД
-db.save_task(task_data)
-active_tasks[task_id] = task_data
+    # Сохранить в БД
+    db.save_task(task_data)
+    active_tasks[task_id] = task_data
 
-# Запустить обработку в фоне
-background_tasks.add_task(process_task_with_checkpoints, task_id, task)
+    # Запустить обработку в фоне
+    background_tasks.add_task(process_task_with_checkpoints, task_id, task)
 
-return TaskCreateResponse(
+    return TaskCreateResponse(
 task_id=task_id,
 status=TaskStatus.CREATED,
 message="Задача создана и запущена"
@@ -317,12 +310,10 @@ raise HTTPException(status_code=500, detail=f"Ошибка создания за
 async def get_task(task_id: str):
 """Получить статус конкретной задачи"""
 try:
-except Exception:
-    pass
-task = db.get_task(task_id)
-if not task:
-    raise HTTPException(status_code=404, detail="Задача не найдена")
-return task
+    task = db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+    return task
 except HTTPException:
 raise
 except Exception as e:
@@ -332,31 +323,29 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения з
 async def pause_task(task_id: str):
 """Поставить задачу на паузу с сохранением состояния"""
 try:
-except Exception:
-    pass
-if task_id in active_tasks:
-    # Создать чекпоинт перед паузой
-    checkpoint_data = {
-    'status': 'paused',
-    'progress': active_tasks[task_id].get('progress', 0),
-    'timestamp': datetime.now().isoformat(),
-    'active_items': active_tasks[task_id].get('active_items', [])
-    }
+    if task_id in active_tasks:
+        # Создать чекпоинт перед паузой
+        checkpoint_data = {
+        'status': 'paused',
+        'progress': active_tasks[task_id].get('progress', 0),
+        'timestamp': datetime.now().isoformat(),
+        'active_items': active_tasks[task_id].get('active_items', [])
+        }
 
-    db.save_task_checkpoint(task_id, checkpoint_data)
+        db.save_task_checkpoint(task_id, checkpoint_data)
 
-    active_tasks[task_id]["status"] = "paused"
-    db.update_task_status(task_id, "paused")
+        active_tasks[task_id]["status"] = "paused"
+        db.update_task_status(task_id, "paused")
 
-    return {"message": "Задача поставлена на паузу", "status": "paused"}
+        return {"message": "Задача поставлена на паузу", "status": "paused"}
 
-# Проверить в БД
-task = db.get_task(task_id)
-if task and task['status'] == 'running':
-    db.update_task_status(task_id, "paused")
-    return {"message": "Задача поставлена на паузу", "status": "paused"}
+    # Проверить в БД
+    task = db.get_task(task_id)
+    if task and task['status'] == 'running':
+        db.update_task_status(task_id, "paused")
+        return {"message": "Задача поставлена на паузу", "status": "paused"}
 
-raise HTTPException(status_code=404, detail="Активная задача не найдена")
+    raise HTTPException(status_code=404, detail="Активная задача не найдена")
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка паузы задачи: {str(e)}")
 
@@ -364,73 +353,60 @@ raise HTTPException(status_code=500, detail=f"Ошибка паузы задач
 async def resume_task(task_id: str, background_tasks: BackgroundTasks):
 """Возобновить задачу с последнего чекпоинта"""
 try:
+    task = db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+
 except Exception:
     pass
-task = db.get_task(task_id)
-if not task:
-    raise HTTPException(status_code=404, detail="Задача не найдена")
-
-except Exception:
-pass
 if task['status'] == 'paused':
-# Получить чекпоинт
-checkpoint = db.get_task_checkpoint(task_id)
+    # Получить чекпоинт
+    checkpoint = db.get_task_checkpoint(task_id)
 
-# Обновить статус
-db.update_task_status(task_id, "running")
-active_tasks[task_id] = task
-active_tasks[task_id]["status"] = "running"
+    # Обновить статус
+    db.update_task_status(task_id, "running")
+    active_tasks[task_id] = task
+    active_tasks[task_id]["status"] = "running"
 
-if checkpoint:
-    active_tasks[task_id]["checkpoint"] = checkpoint
+    if checkpoint:
+        active_tasks[task_id]["checkpoint"] = checkpoint
 
-    # Возобновить обработку
-    task_config = json.loads(task['config']) if isinstance(task['config'], str) else task['config']
-    task_obj = TaskCreate(**task_config)
-    background_tasks.add_task(process_task_with_checkpoints, task_id, task_obj, resume=True)
+        # Возобновить обработку
+        task_config = json.loads(task['config']) if isinstance(task['config'], str) else task['config']
+        task_obj = TaskCreate(**task_config)
+        background_tasks.add_task(process_task_with_checkpoints, task_id, task_obj, resume=True)
 
-    return {"message": "Задача возобновлена", "status": "running"}
-else:
-raise HTTPException(status_code=400, detail=f"Задача не на паузе, текущий статус: {task['status']}")
+        return {"message": "Задача возобновлена", "status": "running"}
+    else:
+    raise HTTPException(status_code=400, detail=f"Задача не на паузе, текущий статус: {task['status']}")
 
 except Exception as e:
-raise HTTPException(status_code=500, detail=f"Ошибка возобновления задачи: {str(e)}")
+    raise HTTPException(status_code=500, detail=f"Ошибка возобновления задачи: {str(e)}")
 
 async def process_task_with_checkpoints(task_id: str, task: TaskCreate, resume: bool = False):
 """Обработка задачи с автосохранением и чекпоинтами"""
 try:
-except Exception:
-    pass
-print(f"🔄 {'Возобновляем' if resume else 'Начинаем'} обработку задачи {task_id}")
+    print(f"🔄 {'Возобновляем' if resume else 'Начинаем'} обработку задачи {task_id}")
 
 except Exception:
-pass
+    pass
 if not resume:
-active_tasks[task_id]["status"] = "running"
-db.update_task_status(task_id, "running")
+    active_tasks[task_id]["status"] = "running"
+    db.update_task_status(task_id, "running")
 
-# Получить текущий прогресс
-current_task = db.get_task(task_id)
-checkpoint = db.get_task_checkpoint(task_id) if resume else None
+    # Получить текущий прогресс
+    current_task = db.get_task(task_id)
+    checkpoint = db.get_task_checkpoint(task_id) if resume else None
 
 
-except Exception as e:
-print(f'Ошибка: {e}')
-pass
-items_processed_data = current_task.get('items_processed', '[]')
-items_failed_data = current_task.get('items_failed', '[]')
-
-# Проверяем тип данных перед парсингом
-if isinstance(items_processed_data, str):
-# Безопасная загрузка JSON
-items_processed_data = current_task.get('items_processed', '[]')
-items_failed_data = current_task.get('items_failed', '[]')
-
-# Проверяем тип данных перед парсингом
-if isinstance(items_processed_data, str):
-try:
-    except Exception:
+    except Exception as e:
+    print(f'Ошибка: {e}')
     pass
+    items_processed_data = current_task.get('items_processed', '[]')
+items_failed_data = current_task.get('items_failed', '[]')
+
+# Проверяем тип данных перед парсингом
+if isinstance(items_processed_data, str):
 # Безопасная загрузка JSON
 items_processed_data = current_task.get('items_processed', '[]')
 items_failed_data = current_task.get('items_failed', '[]')
@@ -459,25 +435,7 @@ if isinstance(items_failed_data, str):
     failed_items = set(items_failed_data)
     else:
     failed_items = set()
-    except json.JSONDecodeError:
-    processed_items = set()
     elif isinstance(items_processed_data, list):
-    processed_items = set(items_processed_data)
-    else:
-    processed_items = set()
-
-    if isinstance(items_failed_data, str):
-try:
-    except Exception:
-    pass
-failed_items = set(json.loads(items_failed_data))
-except json.JSONDecodeError:
-failed_items = set()
-elif isinstance(items_failed_data, list):
-failed_items = set(items_failed_data)
-else:
-failed_items = set()
-elif isinstance(items_processed_data, list):
 processed_items = set(items_processed_data)
 else:
 processed_items = set()
@@ -492,49 +450,49 @@ failed_items = set()
 
 # Восстановить прогресс из чекпоинта
 if checkpoint and 'processed_items' in checkpoint:
-processed_items.update(checkpoint['processed_items'])
+    processed_items.update(checkpoint['processed_items'])
 
-total = len(task.keywords) + len(task.channels)
-last_checkpoint_time = datetime.now()
+    total = len(task.keywords) + len(task.channels)
+    last_checkpoint_time = datetime.now()
 
-# Обработка ключевых слов
-for idx, keyword in enumerate(task.keywords):
-    # Проверка на уже обработанные
-    item_id = f"keyword:{keyword}"
-    if item_id in processed_items:
-        continue
+    # Обработка ключевых слов
+    for idx, keyword in enumerate(task.keywords):
+        # Проверка на уже обработанные
+        item_id = f"keyword:{keyword}"
+        if item_id in processed_items:
+            continue
 
-    # Проверка паузы
-    if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
-        print(f"⏸️  Задача {task_id} на паузе")
-        return
+        # Проверка паузы
+        if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
+            print(f"⏸️  Задача {task_id} на паузе")
+            return
 
-    print(f"🔍 Поиск видео по запросу: {keyword}")
-    try:
-        videos = youtube_parser.search_videos(
-        keyword,
-        settings.MAX_LONG_VIDEOS_SEARCH + settings.MAX_SHORTS_SEARCH,
-        task.order_by.value
-        )
-
-        await process_videos_extended(videos, task_id)
-
-        # Отметить как обработанный
-        processed_items.add(item_id)
-
-        # Обновить прогресс
-        progress = len(processed_items)
-        active_tasks[task_id]["progress"] = progress
-
-        # Автосохранение
-        if len(processed_items) % AUTOSAVE_INTERVAL == 0:
-            db.update_task_progress_extended(
-            task_id, progress, total,
-            list(processed_items), list(failed_items)
+        print(f"🔍 Поиск видео по запросу: {keyword}")
+        try:
+            videos = youtube_parser.search_videos(
+            keyword,
+            settings.MAX_LONG_VIDEOS_SEARCH + settings.MAX_SHORTS_SEARCH,
+            task.order_by.value
             )
 
-            # Чекпоинт каждые N минут
-            if (datetime.now() - last_checkpoint_time).seconds > CHECKPOINT_INTERVAL:
+            await process_videos_extended(videos, task_id)
+
+            # Отметить как обработанный
+            processed_items.add(item_id)
+
+            # Обновить прогресс
+            progress = len(processed_items)
+            active_tasks[task_id]["progress"] = progress
+
+            # Автосохранение
+            if len(processed_items) % AUTOSAVE_INTERVAL == 0:
+                db.update_task_progress_extended(
+                task_id, progress, total,
+                list(processed_items), list(failed_items)
+                )
+
+                # Чекпоинт каждые N минут
+                if (datetime.now() - last_checkpoint_time).seconds > CHECKPOINT_INTERVAL:
                 checkpoint_data = {
                 'processed_items': list(processed_items),
                 'failed_items': list(failed_items),
@@ -556,32 +514,32 @@ for idx, keyword in enumerate(task.keywords):
         # Проверка на уже обработанные
         item_id = f"channel:{channel_url}"
         if item_id in processed_items:
-        continue
+            continue
 
-    # Проверка паузы
-    if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
-        print(f"⏸️  Задача {task_id} на паузе")
-        return
+        # Проверка паузы
+        if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
+            print(f"⏸️  Задача {task_id} на паузе")
+            return
 
-    print(f"📺 Анализ канала: {channel_url}")
-    try:
-        channel_id = youtube_parser.extract_channel_id(channel_url)
-        if channel_id:
-            # Получить информацию о канале
-            channel_info = youtube_parser.get_channel_info(channel_id)
-            if channel_info:
-                # Расширенный анализ канала
-                channel_info = await analyze_channel_extended(channel_info)
-                db.save_channel(channel_info)
+        print(f"📺 Анализ канала: {channel_url}")
+        try:
+            channel_id = youtube_parser.extract_channel_id(channel_url)
+            if channel_id:
+                # Получить информацию о канале
+                channel_info = youtube_parser.get_channel_info(channel_id)
+                if channel_info:
+                    # Расширенный анализ канала
+                    channel_info = await analyze_channel_extended(channel_info)
+                    db.save_channel(channel_info)
 
-                # Получить видео канала
-                videos = youtube_parser.get_channel_videos(
-                channel_id,
-                settings.MAX_LONG_VIDEOS_CHANNEL + settings.MAX_SHORTS_CHANNEL
-                )
-                await process_videos_extended(videos, task_id)
+                    # Получить видео канала
+                    videos = youtube_parser.get_channel_videos(
+                    channel_id,
+                    settings.MAX_LONG_VIDEOS_CHANNEL + settings.MAX_SHORTS_CHANNEL
+                    )
+                    await process_videos_extended(videos, task_id)
 
-                # Отметить как обработанный
+                    # Отметить как обработанный
                 processed_items.add(item_id)
 
                 # Обновить прогресс
@@ -621,57 +579,57 @@ for idx, keyword in enumerate(task.keywords):
     except Exception as e:
     print(f"❌ Критическая ошибка в задаче {task_id}: {e}")
     if task_id in active_tasks:
-    active_tasks[task_id]["status"] = "error"
-    db.update_task_status(task_id, "error", str(e))
+        active_tasks[task_id]["status"] = "error"
+        db.update_task_status(task_id, "error", str(e))
 
-    async def process_videos_extended(videos: List[Dict], task_id: str):
-    """Обработка видео с расширенным анализом и кэшированием"""
+        async def process_videos_extended(videos: List[Dict], task_id: str):
+"""Обработка видео с расширенным анализом и кэшированием"""
 for video in videos:
-try:
-    video_id = video.get('video_id')
-    if not video_id or db.video_exists(video_id):
-        continue
+    try:
+        video_id = video.get('video_id')
+        if not video_id or db.video_exists(video_id):
+            continue
 
-    print(f"  📹 Обработка видео: {video.get('title', 'Unknown')[:50]}...")
+        print(f"  📹 Обработка видео: {video.get('title', 'Unknown')[:50]}...")
 
-    # Получить детальную информацию о видео
-    details = youtube_parser.get_video_details([video_id])
-    if video_id in details:
-        video.update(details[video_id])
+        # Получить детальную информацию о видео
+        details = youtube_parser.get_video_details([video_id])
+        if video_id in details:
+            video.update(details[video_id])
 
-        # Добавить метаданные
-        video['analyzed_at'] = datetime.now().isoformat()
-        video['task_id'] = task_id
+            # Добавить метаданные
+            video['analyzed_at'] = datetime.now().isoformat()
+            video['task_id'] = task_id
 
-        # Проверить кэш транскриптов
-        cached_transcript = db.get_cached_transcript(video_id)
+            # Проверить кэш транскриптов
+            cached_transcript = db.get_cached_transcript(video_id)
 
-    if cached_transcript:
-        video['transcript'] = cached_transcript['transcript']
-        video['transcript_source'] = f"cache_{cached_transcript['source']}"
-        print(f"    ✅ Транскрипт загружен из кэша")
-        else:
-        # Попытка получить транскрипт
-        try:
-            from youtube_transcript_api import YouTubeTranscriptApi
-
-            # Попробовать получить субтитры
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-
-            # Приоритет: русские -> английские -> любые
-            transcript = None
+        if cached_transcript:
+            video['transcript'] = cached_transcript['transcript']
+            video['transcript_source'] = f"cache_{cached_transcript['source']}"
+            print(f"    ✅ Транскрипт загружен из кэша")
+            else:
+            # Попытка получить транскрипт
             try:
-                transcript = transcript_list.find_transcript(['ru'])
-                except:
-                try:
-                    transcript = transcript_list.find_transcript(['en'])
-                    except:
-                    # Берем первый доступный
-                    for t in transcript_list:
-                        transcript = t
-                        break
+                from youtube_transcript_api import YouTubeTranscriptApi
 
-                if transcript:
+                # Попробовать получить субтитры
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+                # Приоритет: русские -> английские -> любые
+                transcript = None
+                try:
+                    transcript = transcript_list.find_transcript(['ru'])
+                    except:
+                    try:
+                        transcript = transcript_list.find_transcript(['en'])
+                        except:
+                        # Берем первый доступный
+                        for t in transcript_list:
+                            transcript = t
+                            break
+
+                    if transcript:
                     transcript_text = ' '.join([entry['text'] for entry in transcript.fetch()])
                     video['transcript'] = transcript_text[:50000]  # Ограничение длины
                     video['transcript_source'] = f"youtube_{transcript.language_code}"
@@ -685,12 +643,12 @@ try:
                     'youtube'
                     )
 
-                    except Exception as e:
+                except Exception as e:
                 print(f"    ⚠️  Не удалось получить транскрипт: {e}")
                 video['transcript_source'] = 'none'
 
                 # Анализ транскрипта если есть
-                if video.get('transcript'):
+            if video.get('transcript'):
             transcript_text = video['transcript']
 
             # Извлечение ключевых слов
@@ -701,14 +659,14 @@ try:
             word_count = len(transcript_text.split())
             duration_seconds = video.get('duration_seconds', 0)
             if duration_seconds > 0:
-            video['speech_speed'] = round((word_count / duration_seconds) * 60, 1)
+                video['speech_speed'] = round((word_count / duration_seconds) * 60, 1)
 
-            # Проверка на рекламу
-            ad_keywords = ['спонсор', 'реклама', 'промокод', 'скидка', 'sponsor', 'promo', 'discount']
-            video['has_branding'] = any(keyword in transcript_text.lower() for keyword in ad_keywords)
+                # Проверка на рекламу
+                ad_keywords = ['спонсор', 'реклама', 'промокод', 'скидка', 'sponsor', 'promo', 'discount']
+                video['has_branding'] = any(keyword in transcript_text.lower() for keyword in ad_keywords)
 
-            # Анализ интро/аутро
-            if duration_seconds > 30:
+                # Анализ интро/аутро
+                if duration_seconds > 30:
                 # Первые 10% текста
                 intro_text = transcript_text[:len(transcript_text)//10]
                 # Последние 10% текста
@@ -721,11 +679,11 @@ try:
                 video['has_outro'] = any(pattern in outro_text.lower() for pattern in outro_patterns)
 
                 # Базовые метрики вовлеченности
-                views = video.get('views', 0)
+            views = video.get('views', 0)
             likes = video.get('likes', 0)
             comments = video.get('comments', 0)
 
-        if views > 0:
+            if views > 0:
             video['like_ratio'] = utils.calculate_like_ratio(views, likes)
             video['comment_ratio'] = utils.calculate_comment_ratio(views, comments)
             video['engagement_rate'] = utils.calculate_engagement_rate(views, likes, comments)
@@ -754,58 +712,54 @@ try:
             db.save_trend_analysis(keyword, trend_data)
 
             except Exception as e:
-            print(f"  ❌ Ошибка обработки видео {video.get('video_id', 'unknown')}: {e}")
+        print(f"  ❌ Ошибка обработки видео {video.get('video_id', 'unknown')}: {e}")
         continue
 
-        # ============ YOUTUBE SERVICE ============
+    # ============ YOUTUBE SERVICE ============
 
-    @youtube_router.get("/search")
+@youtube_router.get("/search")
 async def search_videos(query: str, max_results: int = 10, order: str = "relevance"):
 """Поиск видео по запросу"""
 try:
-except Exception:
-    pass
-if not youtube_parser:
-    raise HTTPException(status_code=400, detail="YouTube API не настроен")
+    if not youtube_parser:
+        raise HTTPException(status_code=400, detail="YouTube API не настроен")
 
-videos = youtube_parser.search_videos(query, max_results, order)
+    videos = youtube_parser.search_videos(query, max_results, order)
 
-# Получить детальную информацию
-video_ids = [v['video_id'] for v in videos]
-details = youtube_parser.get_video_details(video_ids)
+    # Получить детальную информацию
+    video_ids = [v['video_id'] for v in videos]
+    details = youtube_parser.get_video_details(video_ids)
 
-# Объединить данные
-for video in videos:
-    if video['video_id'] in details:
-        video.update(details[video['video_id']])
+    # Объединить данные
+    for video in videos:
+        if video['video_id'] in details:
+            video.update(details[video['video_id']])
 
-        return {
-    "videos": videos,
-    "count": len(videos),
-    "query": query,
-    "order": order
-    }
+            return {
+        "videos": videos,
+        "count": len(videos),
+        "query": query,
+        "order": order
+        }
 
-except Exception as e:
+    except Exception as e:
     raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
 @youtube_router.get("/channel/{channel_id}")
 async def get_channel_info(channel_id: str):
 """Получить информацию о канале"""
 try:
-except Exception:
-    pass
-if not youtube_parser:
-    raise HTTPException(status_code=400, detail="YouTube API не настроен")
+    if not youtube_parser:
+        raise HTTPException(status_code=400, detail="YouTube API не настроен")
 
-channel_info = youtube_parser.get_channel_info(channel_id)
-if not channel_info:
-    raise HTTPException(status_code=404, detail="Канал не найден")
+    channel_info = youtube_parser.get_channel_info(channel_id)
+    if not channel_info:
+        raise HTTPException(status_code=404, detail="Канал не найден")
 
-# Расширенный анализ
-channel_info = await analyze_channel_extended(channel_info)
+    # Расширенный анализ
+    channel_info = await analyze_channel_extended(channel_info)
 
-return channel_info
+    return channel_info
 
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения канала: {str(e)}")
@@ -814,29 +768,27 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения к
 async def get_channel_videos(channel_id: str, max_results: int = 20):
 """Получить видео канала"""
 try:
-except Exception:
-    pass
-if not youtube_parser:
-    raise HTTPException(status_code=400, detail="YouTube API не настроен")
+    if not youtube_parser:
+        raise HTTPException(status_code=400, detail="YouTube API не настроен")
 
-videos = youtube_parser.get_channel_videos(channel_id, max_results)
+    videos = youtube_parser.get_channel_videos(channel_id, max_results)
 
-# Получить детальную информацию
-video_ids = [v['video_id'] for v in videos]
-details = youtube_parser.get_video_details(video_ids)
+    # Получить детальную информацию
+    video_ids = [v['video_id'] for v in videos]
+    details = youtube_parser.get_video_details(video_ids)
 
-# Объединить данные
-for video in videos:
-    if video['video_id'] in details:
-        video.update(details[video['video_id']])
+    # Объединить данные
+    for video in videos:
+        if video['video_id'] in details:
+            video.update(details[video['video_id']])
 
-        return {
-    "channel_id": channel_id,
-    "videos": videos,
-    "count": len(videos)
-    }
+            return {
+        "channel_id": channel_id,
+        "videos": videos,
+        "count": len(videos)
+        }
 
-except Exception as e:
+    except Exception as e:
     raise HTTPException(status_code=500, detail=f"Ошибка получения видео канала: {str(e)}")
 
 # ============ DATA SERVICE ============
@@ -852,12 +804,10 @@ min_engagement: Optional[float] = None
 ):
 """Получить список проанализированных видео с фильтрами"""
 try:
-except Exception:
-    pass
-filters = {}
-if is_short is not None:
-    filters['is_short'] = is_short
-    if channel_id:
+    filters = {}
+    if is_short is not None:
+        filters['is_short'] = is_short
+        if channel_id:
         filters['channel_id'] = channel_id
         if min_views:
         filters['min_views'] = min_views
@@ -873,12 +823,10 @@ if is_short is not None:
 async def get_video_details(video_id: str):
 """Получить детальную информацию о видео"""
 try:
-except Exception:
-    pass
-video = db.get_video_by_id(video_id)
-if not video:
-    raise HTTPException(status_code=404, detail="Видео не найдено")
-return video
+    video = db.get_video_by_id(video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Видео не найдено")
+    return video
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения видео: {str(e)}")
 
@@ -886,10 +834,8 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения в
 async def get_channels():
 """Получить список проанализированных каналов"""
 try:
-except Exception:
-    pass
-channels = db.get_channels()
-return channels
+    channels = db.get_channels()
+    return channels
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения каналов: {str(e)}")
 
@@ -897,12 +843,10 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения к
 async def get_channel_details(channel_id: str):
 """Получить детальную информацию о канале"""
 try:
-except Exception:
-    pass
-channel = db.get_channel_stats(channel_id)
-if not channel:
-    raise HTTPException(status_code=404, detail="Канал не найден")
-return channel
+    channel = db.get_channel_stats(channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Канал не найден")
+    return channel
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения канала: {str(e)}")
 
@@ -910,15 +854,13 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения к
 async def get_statistics():
 """Получить общую статистику"""
 try:
-except Exception:
-    pass
-stats = db.get_statistics()
-stats['active_tasks'] = len(active_tasks)
+    stats = db.get_statistics()
+    stats['active_tasks'] = len(active_tasks)
 
-# Очистить истекший кэш
-db.clean_expired_cache()
+    # Очистить истекший кэш
+    db.clean_expired_cache()
 
-return stats
+    return stats
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения статистики: {str(e)}")
 
@@ -926,14 +868,12 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения с
 async def export_to_excel():
 """Экспорт данных в Excel"""
 try:
+    filename = db.export_to_excel()
+    file_path = Path(filename)
+
+    return {
 except Exception:
     pass
-filename = db.export_to_excel()
-file_path = Path(filename)
-
-return {
-except Exception:
-pass
 "filename": file_path.name,
 "status": "exported",
 "path": str(file_path),
@@ -949,7 +889,7 @@ from fastapi.responses import FileResponse
 
 file_path = Path(settings.EXPORT_DIR) / filename
 if file_path.exists() and file_path.suffix == '.xlsx':
-return FileResponse(
+    return FileResponse(
 path=str(file_path),
 filename=filename,
 media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -960,15 +900,13 @@ raise HTTPException(status_code=404, detail="Файл не найден")
 async def clear_database():
 """Очистить базу данных"""
 try:
-except Exception:
-    pass
-# Очистить активные задачи
-active_tasks.clear()
+    # Очистить активные задачи
+    active_tasks.clear()
 
-# Очистить БД
-db.clear_database()
+    # Очистить БД
+    db.clear_database()
 
-return {"message": "База данных очищена", "status": "success"}
+    return {"message": "База данных очищена", "status": "success"}
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка очистки БД: {str(e)}")
 
@@ -976,12 +914,10 @@ raise HTTPException(status_code=500, detail=f"Ошибка очистки БД: 
 async def backup_database():
 """Создать резервную копию базы данных"""
 try:
+    backup_path = db.backup_database()
+    return {
 except Exception:
     pass
-backup_path = db.backup_database()
-return {
-except Exception:
-pass
 "message": "Резервная копия создана",
 "path": backup_path,
 "status": "success"
@@ -995,12 +931,10 @@ raise HTTPException(status_code=500, detail=f"Ошибка создания ре
 async def get_config():
 """Получить текущую конфигурацию"""
 try:
-except Exception:
-    pass
-config = settings.get_safe_dict()
-config['has_youtube_api'] = bool(settings.YOUTUBE_API_KEY)
-config['whisper_models'] = ['tiny', 'base', 'small', 'medium', 'large']
-return config
+    config = settings.get_safe_dict()
+    config['has_youtube_api'] = bool(settings.YOUTUBE_API_KEY)
+    config['whisper_models'] = ['tiny', 'base', 'small', 'medium', 'large']
+    return config
 except Exception as e:
 raise HTTPException(status_code=500, detail=f"Ошибка получения конфигурации: {str(e)}")
 
@@ -1008,39 +942,35 @@ raise HTTPException(status_code=500, detail=f"Ошибка получения к
 async def update_config(config_data: dict):
 """Обновить конфигурацию"""
 try:
-except Exception:
-    pass
-# Обновить настройки
-settings.update_from_dict(config_data)
+    # Обновить настройки
+    settings.update_from_dict(config_data)
 
-# Пересоздать YouTube parser если изменился API ключ
-global youtube_parser
-if 'youtube_api_key' in config_data and config_data['youtube_api_key']:
-    if config_data['youtube_api_key'] != '***':  # Не обновлять если скрыто
-    settings.YOUTUBE_API_KEY = config_data['youtube_api_key']
-    youtube_parser = YouTubeParser(config_data['youtube_api_key'])
+    # Пересоздать YouTube parser если изменился API ключ
+    global youtube_parser
+    if 'youtube_api_key' in config_data and config_data['youtube_api_key']:
+        if config_data['youtube_api_key'] != '***':  # Не обновлять если скрыто
+        settings.YOUTUBE_API_KEY = config_data['youtube_api_key']
+        youtube_parser = YouTubeParser(config_data['youtube_api_key'])
 
-    return {
-"message": "Конфигурация обновлена",
-"status": "success",
-"config": settings.get_safe_dict()
-}
-except Exception as e:
-raise HTTPException(status_code=500, detail=f"Ошибка обновления конфигурации: {str(e)}")
+        return {
+    "message": "Конфигурация обновлена",
+    "status": "success",
+    "config": settings.get_safe_dict()
+    }
+    except Exception as e:
+    raise HTTPException(status_code=500, detail=f"Ошибка обновления конфигурации: {str(e)}")
 
 @config_router.post("/validate-api-key")
 async def validate_api_key(api_key: str):
 """Проверить YouTube API ключ"""
 try:
+    # Попробовать создать парсер и сделать тестовый запрос
+    test_parser = YouTubeParser(api_key)
+    test_videos = test_parser.search_videos("test", 1)
+
+    return {
 except Exception:
     pass
-# Попробовать создать парсер и сделать тестовый запрос
-test_parser = YouTubeParser(api_key)
-test_videos = test_parser.search_videos("test", 1)
-
-return {
-except Exception:
-pass
 "valid": True,
 "message": "API ключ валидный"
 }
@@ -1056,78 +986,74 @@ return {
 async def analyze_video(video_id: str):
 """Провести анализ конкретного видео"""
 try:
-except Exception:
-    pass
-if not youtube_parser:
-    raise HTTPException(status_code=400, detail="YouTube API не настроен")
+    if not youtube_parser:
+        raise HTTPException(status_code=400, detail="YouTube API не настроен")
 
-# Получить данные видео
-details = youtube_parser.get_video_details([video_id])
-if video_id not in details:
-    raise HTTPException(status_code=404, detail="Видео не найдено")
+    # Получить данные видео
+    details = youtube_parser.get_video_details([video_id])
+    if video_id not in details:
+        raise HTTPException(status_code=404, detail="Видео не найдено")
 
-video_data = details[video_id]
+    video_data = details[video_id]
 
-# Расширенный анализ
-video_data = await analyze_video_extended(video_data)
+    # Расширенный анализ
+    video_data = await analyze_video_extended(video_data)
 
-# Провести анализ
-analysis_result = {
-"video_id": video_id,
-"engagement_metrics": {
-"views": video_data.get('views', 0),
-"likes": video_data.get('likes', 0),
-"comments": video_data.get('comments', 0),
-"engagement_rate": video_data.get('engagement_rate', 0),
-"like_ratio": video_data.get('like_ratio', 0),
-"comment_ratio": video_data.get('comment_ratio', 0)
-},
-"content_analysis": {
-"duration": video_data.get('duration'),
-"is_short": video_data.get('is_short', False),
-"has_cc": video_data.get('has_cc', False),
-"tags_count": len(video_data.get('tags', [])),
-"video_quality": video_data.get('video_quality', 'sd'),
-"category": video_data.get('video_category', 'other'),
-"seo_score": video_data.get('seo_score', 0),
-"thumbnail_score": video_data.get('thumbnail_click_score', 0)
-},
-"recommendations": video_data.get('improvement_suggestions', []),
-"strategy": video_data.get('content_strategy', ''),
-"estimated_revenue": video_data.get('estimated_revenue', 0),
-"analysis_date": datetime.now().isoformat()
-}
+    # Провести анализ
+    analysis_result = {
+    "video_id": video_id,
+    "engagement_metrics": {
+    "views": video_data.get('views', 0),
+    "likes": video_data.get('likes', 0),
+    "comments": video_data.get('comments', 0),
+    "engagement_rate": video_data.get('engagement_rate', 0),
+    "like_ratio": video_data.get('like_ratio', 0),
+    "comment_ratio": video_data.get('comment_ratio', 0)
+    },
+    "content_analysis": {
+    "duration": video_data.get('duration'),
+    "is_short": video_data.get('is_short', False),
+    "has_cc": video_data.get('has_cc', False),
+    "tags_count": len(video_data.get('tags', [])),
+    "video_quality": video_data.get('video_quality', 'sd'),
+    "category": video_data.get('video_category', 'other'),
+    "seo_score": video_data.get('seo_score', 0),
+    "thumbnail_score": video_data.get('thumbnail_click_score', 0)
+    },
+    "recommendations": video_data.get('improvement_suggestions', []),
+    "strategy": video_data.get('content_strategy', ''),
+    "estimated_revenue": video_data.get('estimated_revenue', 0),
+    "analysis_date": datetime.now().isoformat()
+    }
 
-# Сохранить в БД если не существует
-if not db.video_exists(video_id):
-    video_data['analyzed_at'] = datetime.now().isoformat()
-    db.save_video(video_data)
+    # Сохранить в БД если не существует
+    if not db.video_exists(video_id):
+        video_data['analyzed_at'] = datetime.now().isoformat()
+        db.save_video(video_data)
 
-    return analysis_result
+        return analysis_result
 
 except Exception as e:
-raise HTTPException(status_code=500, detail=f"Ошибка анализа видео: {str(e)}")
+    raise HTTPException(status_code=500, detail=f"Ошибка анализа видео: {str(e)}")
 
 @analysis_router.post("/bulk")
 async def analyze_bulk(video_urls: List[str], background_tasks: BackgroundTasks):
 """Массовый анализ видео"""
 try:
-except Exception:
-    pass
-if not youtube_parser:
-    raise HTTPException(status_code=400, detail="YouTube API не настроен")
+    if not youtube_parser:
+        raise HTTPException(status_code=400, detail="YouTube API не настроен")
 
-# Извлечь video_ids
-video_ids = []
-for url in video_urls:
-    video_id = utils.extract_video_id_from_url(url)
-    if video_id:
-        video_ids.append(video_id)
+    # Извлечь video_ids
+    video_ids = []
+    for url in video_urls:
+        video_id = utils.extract_video_id_from_url(url)
+        if video_id:
+            video_ids.append(video_id)
 
-    if not video_ids:
+        if not video_ids:
         raise HTTPException(status_code=400, detail="Не найдено валидных video ID")
 
-        # Создать задачу для анализа
+    # Создать задачу для анализа
     task_id = str(uuid.uuid4())
     task_data = {
     "task_id": task_id,
@@ -1146,7 +1072,7 @@ for url in video_urls:
 
     return {
 except Exception:
-pass
+    pass
 "task_id": task_id,
 "video_count": len(video_ids),
 "status": "started"
@@ -1159,110 +1085,104 @@ raise HTTPException(status_code=500, detail=f"Ошибка массового а
 async def analyze_competitors(channel_id: str, competitor_ids: List[str] = None):
 """Анализ конкурентов канала"""
 try:
-except Exception:
-    pass
-if not competitor_ids:
-    # Автоматически найти конкурентов (каналы с похожим контентом)
-    # Это упрощенная версия - в реальности нужен более сложный алгоритм
-    channel_videos = db.get_videos(limit=10, offset=0, filters={'channel_id': channel_id})
+    if not competitor_ids:
+        # Автоматически найти конкурентов (каналы с похожим контентом)
+        # Это упрощенная версия - в реальности нужен более сложный алгоритм
+        channel_videos = db.get_videos(limit=10, offset=0, filters={'channel_id': channel_id})
 
-if channel_videos:
-    # Получить ключевые слова из видео канала
-    all_keywords = []
-    for video in channel_videos:
-        if video.get('keywords'):
-            all_keywords.extend(video['keywords'][:3])
+    if channel_videos:
+        # Получить ключевые слова из видео канала
+        all_keywords = []
+        for video in channel_videos:
+            if video.get('keywords'):
+                all_keywords.extend(video['keywords'][:3])
 
-            # Найти каналы с похожими ключевыми словами
-            # Это заглушка - нужна реализация поиска похожих каналов
-            competitor_ids = []
+                # Найти каналы с похожими ключевыми словами
+                # Это заглушка - нужна реализация поиска похожих каналов
+                competitor_ids = []
 
-        if not competitor_ids:
-            raise HTTPException(status_code=400, detail="Не найдены конкуренты для анализа")
+            if not competitor_ids:
+        raise HTTPException(status_code=400, detail="Не найдены конкуренты для анализа")
 
         # Провести анализ
         analysis = db.analyze_competitor_channels(channel_id, competitor_ids)
 
         return analysis
 
-    except Exception as e:
-raise HTTPException(status_code=500, detail=f"Ошибка анализа конкурентов: {str(e)}")
+except Exception as e:
+    raise HTTPException(status_code=500, detail=f"Ошибка анализа конкурентов: {str(e)}")
 
 async def process_bulk_analysis(task_id: str, video_ids: List[str]):
 """Обработка массового анализа"""
 try:
+    active_tasks[task_id]["status"] = "running"
+    db.update_task_status(task_id, "running")
+
+    processed = []
+    failed = []
+
 except Exception:
     pass
-active_tasks[task_id]["status"] = "running"
-db.update_task_status(task_id, "running")
-
-processed = []
-failed = []
-
-except Exception:
-pass
 for idx, video_id in enumerate(video_ids):
-if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
-    return
+    if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
+        return
 
-try:
-    # Получить детали видео
-    details = youtube_parser.get_video_details([video_id])
-    if video_id in details:
-        video_data = details[video_id]
+    try:
+        # Получить детали видео
+        details = youtube_parser.get_video_details([video_id])
+        if video_id in details:
+            video_data = details[video_id]
 
-        # Расширенный анализ
-        video_data = await analyze_video_extended(video_data)
+            # Расширенный анализ
+            video_data = await analyze_video_extended(video_data)
 
-        video_data['analyzed_at'] = datetime.now().isoformat()
-        video_data['task_id'] = task_id
+            video_data['analyzed_at'] = datetime.now().isoformat()
+            video_data['task_id'] = task_id
 
-        # Попытка получить транскрипт
-        await process_videos_extended([video_data], task_id)
+            # Попытка получить транскрипт
+            await process_videos_extended([video_data], task_id)
 
-        processed.append(video_id)
-        else:
-        failed.append(video_id)
+            processed.append(video_id)
+            else:
+            failed.append(video_id)
 
-        # Обновить прогресс
-        progress = idx + 1
-        active_tasks[task_id]["progress"] = progress
-        db.update_task_progress_extended(task_id, progress, len(video_ids), processed, failed)
+            # Обновить прогресс
+            progress = idx + 1
+            active_tasks[task_id]["progress"] = progress
+            db.update_task_progress_extended(task_id, progress, len(video_ids), processed, failed)
 
-        await asyncio.sleep(settings.REQUEST_DELAY)
+            await asyncio.sleep(settings.REQUEST_DELAY)
 
-    except Exception as e:
-        print(f"Ошибка анализа видео {video_id}: {e}")
-        failed.append(video_id)
-        continue
+        except Exception as e:
+            print(f"Ошибка анализа видео {video_id}: {e}")
+            failed.append(video_id)
+            continue
 
-    # Завершение
-    active_tasks[task_id]["status"] = "completed"
-    db.update_task_status(task_id, "completed")
+        # Завершение
+        active_tasks[task_id]["status"] = "completed"
+        db.update_task_status(task_id, "completed")
 
-if task_id in active_tasks:
-    del active_tasks[task_id]
+    if task_id in active_tasks:
+        del active_tasks[task_id]
 
-    except Exception as e:
+        except Exception as e:
     active_tasks[task_id]["status"] = "error"
     db.update_task_status(task_id, "error", str(e))
 
     # ============ STARTUP/SHUTDOWN ============
 
-    async def startup_event():
+async def startup_event():
 """Действия при запуске приложения"""
 print("🚀 Запуск YouTube Analyzer...")
 
 # Миграция БД
 try:
-except Exception:
-    pass
-db.migrate_database()
-except Exception as e:
-print(f"⚠️  Ошибка миграции БД: {e}")
+    db.migrate_database()
+    except Exception as e:
+    print(f"⚠️  Ошибка миграции БД: {e}")
 
-# Очистка истекшего кэша
-try:
+    # Очистка истекшего кэша
+    try:
     db.clean_expired_cache()
     except Exception as e:
     print(f"⚠️  Ошибка очистки кэша: {e}")
@@ -1273,20 +1193,20 @@ try:
     print("✅ Сервисы готовы к работе")
 
     async def shutdown_event():
-    """Действия при остановке приложения"""
+"""Действия при остановке приложения"""
 print("🛑 Остановка YouTube Analyzer...")
 
 # Создать чекпоинты для всех активных задач
 for task_id, task in active_tasks.items():
-if task['status'] == 'running':
-    checkpoint_data = {
-    'status': 'interrupted',
-    'progress': task.get('progress', 0),
-    'timestamp': datetime.now().isoformat()
-    }
-    db.save_task_checkpoint(task_id, checkpoint_data)
-    db.update_task_status(task_id, 'paused')
+    if task['status'] == 'running':
+        checkpoint_data = {
+        'status': 'interrupted',
+        'progress': task.get('progress', 0),
+        'timestamp': datetime.now().isoformat()
+        }
+        db.save_task_checkpoint(task_id, checkpoint_data)
+        db.update_task_status(task_id, 'paused')
 
-    print("✅ Сервисы остановлены")
+        print("✅ Сервисы остановлены")
 
     print("✅ Enhanced Services загружены успешно")
