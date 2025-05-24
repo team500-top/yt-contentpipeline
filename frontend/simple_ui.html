@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube Analyzer - Simple UI</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .section { margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+        .result { margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 4px; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 YouTube Analyzer - Простой интерфейс</h1>
+        
+        <div class="section">
+            <h2>📋 Создать задачу</h2>
+            <textarea id="keywords" rows="3" placeholder="Введите ключевые слова (каждое с новой строки)">python tutorial
+web development</textarea>
+            <br>
+            <button onclick="createSimpleTask()">Создать задачу</button>
+            <div id="task-result"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Статистика</h2>
+            <button onclick="loadStats()">Загрузить статистику</button>
+            <div id="stats-result"></div>
+        </div>
+        
+        <div class="section">
+            <h2>🎬 Видео</h2>
+            <button onclick="loadVideos()">Показать видео</button>
+            <div id="videos-result"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📺 Каналы</h2>
+            <button onclick="loadChannels()">Показать каналы</button>
+            <div id="channels-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Простой API клиент без зависимостей
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch('/api' + endpoint, {
+                    headers: {'Content-Type': 'application/json'},
+                    ...options
+                });
+                const data = await response.json();
+                return {success: response.ok, data};
+            } catch (error) {
+                return {success: false, error: error.message};
+            }
+        }
+        
+ async function createSimpleTask() {
+    const keywords = document.getElementById('keywords').value
+        .split('\n')
+        .map(k => k.trim())
+        .filter(k => k);
+        
+    if (keywords.length === 0) {
+        document.getElementById('task-result').innerHTML = '<div class="result error">Введите хотя бы одно ключевое слово</div>';
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/tasks/', {  // Добавлен слеш в конце!
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                keywords: keywords,
+                channels: [],
+                order_by: 'relevance',
+                max_videos_per_source: 20
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('task-result').innerHTML = 
+                `<div class="result success">✅ Задача создана! ID: ${data.task_id}</div>`;
+        } else {
+            document.getElementById('task-result').innerHTML = 
+                `<div class="result error">❌ Ошибка: ${data.detail || 'Неизвестная ошибка'}</div>`;
+        }
+    } catch (error) {
+        document.getElementById('task-result').innerHTML = 
+            `<div class="result error">❌ Ошибка сети: ${error.message}</div>`;
+    }
+}
+        
+        async function loadStats() {
+            const result = await apiCall('/data/stats');
+            
+            if (result.success) {
+                document.getElementById('stats-result').innerHTML = `
+                    <div class="result">
+                        <strong>Статистика:</strong><br>
+                        Видео: ${result.data.total_videos}<br>
+                        Каналов: ${result.data.total_channels}<br>
+                        Задач выполнено: ${result.data.completed_tasks}<br>
+                        Средняя вовлеченность: ${result.data.avg_engagement}%
+                    </div>
+                `;
+            } else {
+                document.getElementById('stats-result').innerHTML = 
+                    `<div class="result error">❌ Ошибка загрузки</div>`;
+            }
+        }
+        
+        async function loadVideos() {
+            const result = await apiCall('/data/videos?limit=10');
+            
+            if (result.success && result.data.length > 0) {
+                let html = '<div class="result"><strong>Последние видео:</strong><br>';
+                result.data.forEach(video => {
+                    html += `• ${video.title} (${video.views} просмотров)<br>`;
+                });
+                html += '</div>';
+                document.getElementById('videos-result').innerHTML = html;
+            } else {
+                document.getElementById('videos-result').innerHTML = 
+                    `<div class="result">Нет видео</div>`;
+            }
+        }
+        
+        async function loadChannels() {
+            const result = await apiCall('/data/channels');
+            
+            if (result.success && result.data.length > 0) {
+                let html = '<div class="result"><strong>Каналы:</strong><br>';
+                result.data.forEach(channel => {
+                    html += `• ${channel.channel_title} (${channel.subscriber_count} подписчиков)<br>`;
+                });
+                html += '</div>';
+                document.getElementById('channels-result').innerHTML = html;
+            } else {
+                document.getElementById('channels-result').innerHTML = 
+                    `<div class="result">Нет каналов</div>`;
+            }
+        }
+        
+        // Проверка при загрузке
+        window.onload = function() {
+            console.log('Simple UI loaded');
+            loadStats();
+        };
+    </script>
+</body>
+</html>

@@ -578,5 +578,167 @@
             subtree: true
         });
     </script>
+
+    <!-- Автоматическая инициализация если обычная не работает -->
+    <script>
+        if (localStorage.getItem('forceInit') === 'true') {
+            console.log('Применяем принудительную инициализацию...');
+            
+            setTimeout(() => {
+                if (typeof ApiClient === 'undefined') {
+                    fetch('/app.js')
+                        .then(r => r.text())
+                        .then(code => {
+                            eval(code);
+                            if (typeof ApiClient !== 'undefined') {
+                                window.apiClient = new ApiClient();
+                                console.log('✅ Frontend инициализирован принудительно');
+                            }
+                        });
+                }
+            }, 1000);
+        }
+    </script>
+
+<!-- Принудительная инициализация -->
+<script>
+    console.log('🚀 Начинаем принудительную инициализацию...');
+    
+    // Метод 1: Ждем загрузку и проверяем ApiClient
+    let initAttempts = 0;
+    const maxAttempts = 20;
+    
+    function tryInit() {
+        initAttempts++;
+        console.log(`Попытка ${initAttempts}/${maxAttempts}`);
+        
+        if (typeof ApiClient !== 'undefined') {
+            console.log('✅ ApiClient найден!');
+            initializeApp();
+        } else if (initAttempts < maxAttempts) {
+            setTimeout(tryInit, 500);
+        } else {
+            console.log('❌ ApiClient не загрузился, пробуем альтернативный метод...');
+            forceLoadScript();
+        }
+    }
+    
+    // Метод 2: Принудительная загрузка скрипта
+    function forceLoadScript() {
+        console.log('🔄 Загружаем app.js принудительно...');
+        
+        fetch('/app.js')
+            .then(response => response.text())
+            .then(scriptText => {
+                console.log(`📦 Получен скрипт размером ${scriptText.length} байт`);
+                
+                try {
+                    // Создаем функцию и выполняем
+                    const scriptFunc = new Function(scriptText);
+                    scriptFunc();
+                    
+                    if (typeof ApiClient !== 'undefined') {
+                        console.log('✅ ApiClient загружен через eval!');
+                        initializeApp();
+                    } else {
+                        console.error('❌ ApiClient все еще не определен');
+                        showErrorMessage();
+                    }
+                } catch (error) {
+                    console.error('❌ Ошибка выполнения скрипта:', error);
+                    showErrorMessage();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Не удалось загрузить app.js:', error);
+                showErrorMessage();
+            });
+    }
+    
+    // Инициализация приложения
+    function initializeApp() {
+        try {
+            // Создаем глобальный экземпляр ApiClient
+            window.apiClient = new ApiClient();
+            console.log('✅ ApiClient создан');
+            
+            // Инициализируем иконки
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+                console.log('✅ Lucide иконки инициализированы');
+            }
+            
+            // Проверяем наличие функций
+            const requiredFunctions = ['showTab', 'createTask', 'loadTasks'];
+            let allFunctionsExist = true;
+            
+            requiredFunctions.forEach(func => {
+                if (typeof window[func] === 'function') {
+                    console.log(`✅ Функция ${func} доступна`);
+                } else {
+                    console.error(`❌ Функция ${func} не найдена`);
+                    allFunctionsExist = false;
+                }
+            });
+            
+            if (allFunctionsExist) {
+                console.log('🎉 Приложение успешно инициализировано!');
+                
+                // Загружаем начальные данные
+                if (typeof loadStats === 'function') {
+                    loadStats();
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Ошибка инициализации:', error);
+            showErrorMessage();
+        }
+    }
+    
+    // Показать сообщение об ошибке
+    function showErrorMessage() {
+        const alert = document.getElementById('alert');
+        if (alert) {
+            alert.className = 'fixed top-20 right-4 z-50 max-w-sm p-4 rounded-lg border bg-red-50 border-red-200 text-red-800 shadow-lg';
+            alert.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium">Ошибка загрузки интерфейса</p>
+                        <p class="text-xs mt-1">Попробуйте перезагрузить страницу или используйте <a href="/simple_ui.html" class="underline">упрощенный интерфейс</a></p>
+                    </div>
+                </div>
+            `;
+            alert.classList.remove('hidden');
+        }
+    }
+    
+    // Запускаем инициализацию
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('📄 DOM загружен, начинаем инициализацию...');
+        setTimeout(tryInit, 1000); // Даем время скриптам загрузиться
+    });
+    
+    // Дополнительная проверка через 5 секунд
+    setTimeout(() => {
+        if (typeof window.apiClient === 'undefined') {
+            console.warn('⚠️ Через 5 секунд apiClient все еще не создан');
+            forceLoadScript();
+        }
+    }, 5000);
+</script>
+
+<!-- Отладочная информация -->
+<script>
+    // Вывод отладочной информации в консоль
+    console.log('=== YouTube Analyzer Debug Info ===');
+    console.log('Scripts on page:', document.scripts.length);
+    console.log('Script sources:', Array.from(document.scripts).map(s => s.src || 'inline').filter(s => s !== 'inline'));
+    console.log('Window properties:', Object.keys(window).filter(k => k.toLowerCase().includes('api') || k.toLowerCase().includes('load')));
+</script>
+
 </body>
 </html>

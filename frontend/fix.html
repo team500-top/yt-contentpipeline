@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Fix Frontend</title>
+</head>
+<body>
+    <h1>Исправление Frontend</h1>
+    <div id="status">Загрузка...</div>
+    
+    <script>
+        // Принудительная загрузка и инициализация
+        fetch('/app.js')
+            .then(r => r.text())
+            .then(code => {
+                eval(code);
+                
+                if (typeof ApiClient !== 'undefined') {
+                    window.apiClient = new ApiClient();
+                    document.getElementById('status').innerHTML = '✅ Frontend исправлен! <br><a href="/">Перейти на главную</a>';
+                    
+                    // Сохраняем в localStorage для автоматической загрузки
+                    localStorage.setItem('forceInit', 'true');
+                } else {
+                    document.getElementById('status').innerHTML = '❌ Не удалось исправить';
+                }
+            })
+            .catch(e => {
+                document.getElementById('status').innerHTML = '❌ Ошибка: ' + e;
+            });
+    </script>
+</body>
+</html>
