@@ -13,10 +13,13 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1'
+                            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+                            400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8'
                         },
-                        accent: {
-                            50: '#fef2f2', 100: '#fee2e2', 500: '#ef4444', 600: '#dc2626'
+                        gray: {
+                            50: '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db',
+                            400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151',
+                            800: '#1f2937', 900: '#111827'
                         }
                     }
                 }
@@ -26,25 +29,25 @@
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-4">
-                    <div class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-sm">
                         <i data-lucide="youtube" class="w-6 h-6 text-white"></i>
                     </div>
                     <div>
-                        <h1 class="text-xl font-bold text-gray-900">YouTube Analyzer</h1>
-                        <p class="text-sm text-gray-500">Анализ контента и трендов</p>
+                        <h1 class="text-xl font-semibold text-gray-900">YouTube Analyzer</h1>
+                        <p class="text-xs text-gray-500">Анализ контента и трендов</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                         <i data-lucide="bell" class="w-5 h-5"></i>
                     </button>
-                    <div class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                        <span class="text-white text-sm font-medium">U</span>
-                    </div>
+                    <button class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -57,35 +60,37 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Navigation -->
         <nav class="mb-8">
-            <div class="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-gray-200">
-                <button class="nav-tab active" data-tab="new-task" onclick="showTab('new-task', this)">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    <span>Новая задача</span>
-                </button>
-                <button class="nav-tab" data-tab="tasks" onclick="showTab('tasks', this)">
-                    <i data-lucide="list-checks" class="w-4 h-4"></i>
-                    <span>Задачи</span>
-                </button>
-                <button class="nav-tab" data-tab="videos" onclick="showTab('videos', this)">
-                    <i data-lucide="play-circle" class="w-4 h-4"></i>
-                    <span>Видео</span>
-                </button>
-                <button class="nav-tab" data-tab="channels" onclick="showTab('channels', this)">
-                    <i data-lucide="tv" class="w-4 h-4"></i>
-                    <span>Каналы</span>
-                </button>
-                <button class="nav-tab" data-tab="config" onclick="showTab('config', this)">
-                    <i data-lucide="settings" class="w-4 h-4"></i>
-                    <span>Настройки</span>
-                </button>
-                <button class="nav-tab" data-tab="stats" onclick="showTab('stats', this)">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-                    <span>Статистика</span>
-                </button>
-                <button class="nav-tab" data-tab="help" onclick="showTab('help', this)">
-                    <i data-lucide="help-circle" class="w-4 h-4"></i>
-                    <span>Справка</span>
-                </button>
+            <div class="bg-white p-1 rounded-xl shadow-sm border border-gray-200">
+                <div class="flex flex-wrap gap-1">
+                    <button class="nav-tab active" data-tab="new-task" onclick="showTab('new-task', this)">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>Новая задача</span>
+                    </button>
+                    <button class="nav-tab" data-tab="tasks" onclick="showTab('tasks', this)">
+                        <i data-lucide="list-checks" class="w-4 h-4"></i>
+                        <span>Задачи</span>
+                    </button>
+                    <button class="nav-tab" data-tab="videos" onclick="showTab('videos', this)">
+                        <i data-lucide="play-circle" class="w-4 h-4"></i>
+                        <span>Видео</span>
+                    </button>
+                    <button class="nav-tab" data-tab="channels" onclick="showTab('channels', this)">
+                        <i data-lucide="tv-2" class="w-4 h-4"></i>
+                        <span>Каналы</span>
+                    </button>
+                    <button class="nav-tab" data-tab="config" onclick="showTab('config', this)">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                        <span>Настройки</span>
+                    </button>
+                    <button class="nav-tab" data-tab="stats" onclick="showTab('stats', this)">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                        <span>Статистика</span>
+                    </button>
+                    <button class="nav-tab" data-tab="help" onclick="showTab('help', this)">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i>
+                        <span>Справка</span>
+                    </button>
+                </div>
             </div>
         </nav>
 
@@ -99,7 +104,7 @@
                             <i data-lucide="plus-circle" class="w-6 h-6 text-primary-600"></i>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-900">Создание новой задачи</h2>
+                            <h2 class="text-2xl font-semibold text-gray-900">Создание новой задачи</h2>
                             <p class="text-gray-500">Настройте параметры анализа контента</p>
                         </div>
                     </div>
@@ -110,12 +115,12 @@
                             <div class="space-y-4">
                                 <div class="flex items-center space-x-2">
                                     <i data-lucide="search" class="w-5 h-5 text-gray-400"></i>
-                                    <label class="text-sm font-semibold text-gray-900">Ключевые запросы</label>
+                                    <label class="text-sm font-medium text-gray-700">Ключевые запросы</label>
                                 </div>
                                 <textarea
                                     id="keywords"
                                     placeholder="Введите ключевые запросы (каждый с новой строки)&#10;Например:&#10;python tutorial&#10;web development 2024&#10;react js guide"
-                                    class="w-full h-32 px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                                    class="w-full h-32 px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-colors"
                                 ></textarea>
                                 <p class="text-xs text-gray-500">Каждый запрос с новой строки. Максимум 10 запросов.</p>
                             </div>
@@ -123,13 +128,13 @@
                             <!-- Channels -->
                             <div class="space-y-4">
                                 <div class="flex items-center space-x-2">
-                                    <i data-lucide="tv" class="w-5 h-5 text-gray-400"></i>
-                                    <label class="text-sm font-semibold text-gray-900">Каналы для анализа</label>
+                                    <i data-lucide="tv-2" class="w-5 h-5 text-gray-400"></i>
+                                    <label class="text-sm font-medium text-gray-700">Каналы для анализа</label>
                                 </div>
                                 <textarea
                                     id="channels"
                                     placeholder="Введите URL каналов (каждый с новой строки)&#10;Например:&#10;https://www.youtube.com/@channel1&#10;https://www.youtube.com/@channel2"
-                                    class="w-full h-32 px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                                    class="w-full h-32 px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-colors"
                                 ></textarea>
                                 <p class="text-xs text-gray-500">URL каналов YouTube. Максимум 5 каналов.</p>
                             </div>
@@ -139,20 +144,20 @@
                         <div class="p-6 bg-gray-50 rounded-xl">
                             <div class="flex items-center space-x-2 mb-4">
                                 <i data-lucide="arrow-up-down" class="w-5 h-5 text-gray-400"></i>
-                                <label class="text-sm font-semibold text-gray-900">Сортировка результатов</label>
+                                <label class="text-sm font-medium text-gray-700">Сортировка результатов</label>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors">
+                                <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                                     <input type="radio" name="order" value="relevance" checked class="text-primary-600 focus:ring-primary-500">
                                     <span class="ml-3 text-sm text-gray-700">По релевантности</span>
                                 </label>
-                                <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors">
+                                <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                                     <input type="radio" name="order" value="date" class="text-primary-600 focus:ring-primary-500">
                                     <span class="ml-3 text-sm text-gray-700">По дате</span>
                                 </label>
-                                <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors">
-                                    <input type="radio" name="order" value="both" class="text-primary-600 focus:ring-primary-500">
-                                    <span class="ml-3 text-sm text-gray-700">Оба варианта</span>
+                                <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="radio" name="order" value="viewCount" class="text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-3 text-sm text-gray-700">По просмотрам</span>
                                 </label>
                             </div>
                         </div>
@@ -161,7 +166,7 @@
                         <div class="flex justify-end pt-4">
                             <button type="submit" class="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span id="submit-text">Создать задачу</span>
-                                <i data-lucide="loader" class="w-4 h-4 ml-2 animate-spin hidden" id="submit-spinner"></i>
+                                <i data-lucide="loader-2" class="w-4 h-4 ml-2 animate-spin hidden" id="submit-spinner"></i>
                             </button>
                         </div>
                     </form>
@@ -172,19 +177,21 @@
             <div id="tasks" class="panel" style="display: none;">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">Задачи анализа</h2>
-                        <button onclick="loadTasks()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                        <h2 class="text-2xl font-semibold text-gray-900">Задачи анализа</h2>
+                        <button onclick="loadTasks()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                             <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                         </button>
                     </div>
                     <div id="task-list" class="space-y-4">
                         <div class="text-center py-8 text-gray-500">
-                            <i data-lucide="loader" class="w-8 h-8 animate-spin mx-auto mb-4"></i>
+                            <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-4"></i>
                             <p>Загрузка задач...</p>
                         </div>
                     </div>
                     <div id="empty-tasks" class="text-center py-16 hidden">
-                        <i data-lucide="inbox" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="inbox" class="w-8 h-8 text-gray-400"></i>
+                        </div>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">Нет активных задач</h3>
                         <p class="text-gray-500 mb-4">Создайте новую задачу для начала анализа</p>
                         <button onclick="showTab('new-task')" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
@@ -198,16 +205,16 @@
             <!-- Videos Panel -->
             <div id="videos" class="panel" style="display: none;">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">Проанализированные видео</h2>
-                        <div class="flex items-center space-x-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                        <h2 class="text-2xl font-semibold text-gray-900">Проанализированные видео</h2>
+                        <div class="flex flex-wrap items-center gap-3">
                             <!-- View Toggle -->
                             <div class="flex bg-gray-100 rounded-lg p-1">
-                                <button onclick="setVideoView('grid')" id="view-grid" class="px-3 py-1 rounded bg-white text-gray-700 text-sm font-medium">
-                                    <i data-lucide="grid" class="w-4 h-4 inline mr-1"></i>
+                                <button onclick="setVideoView('grid')" id="view-grid" class="px-3 py-1.5 rounded bg-white text-gray-700 text-sm font-medium transition-colors">
+                                    <i data-lucide="layout-grid" class="w-4 h-4 inline mr-1"></i>
                                     Карточки
                                 </button>
-                                <button onclick="setVideoView('table')" id="view-table" class="px-3 py-1 rounded text-gray-500 text-sm">
+                                <button onclick="setVideoView('table')" id="view-table" class="px-3 py-1.5 rounded text-gray-500 text-sm transition-colors">
                                     <i data-lucide="list" class="w-4 h-4 inline mr-1"></i>
                                     Таблица
                                 </button>
@@ -215,40 +222,43 @@
                             
                             <!-- Filters -->
                             <input type="text" id="video-search" placeholder="Поиск видео..." 
-                                   class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                   class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                                    onkeyup="filterVideos()">
-                            <select id="video-type-filter" class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            <select id="video-type-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                                     onchange="filterVideos()">
                                 <option value="">Все типы</option>
                                 <option value="short">Shorts</option>
                                 <option value="long">Обычные</option>
                             </select>
-                            <select id="video-sort" class="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            <select id="video-sort" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                                     onchange="sortVideos()">
                                 <option value="date">По дате анализа</option>
                                 <option value="views">По просмотрам</option>
                                 <option value="engagement">По вовлеченности</option>
                                 <option value="likes">По лайкам</option>
                             </select>
-                            <button onclick="loadVideos()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                            <button onclick="loadVideos()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                                 <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                             </button>
                         </div>
                     </div>
                     
+                    <!-- Loading State -->
+                    <div id="videos-loading" class="text-center py-8 text-gray-500">
+                        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-4"></i>
+                        <p>Загрузка видео...</p>
+                    </div>
+                    
                     <!-- Grid View -->
-                    <div id="videos-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="col-span-full text-center py-8 text-gray-500">
-                            <i data-lucide="loader" class="w-8 h-8 animate-spin mx-auto mb-4"></i>
-                            <p>Загрузка видео...</p>
-                        </div>
+                    <div id="videos-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+                        <!-- Videos will be loaded here -->
                     </div>
                     
                     <!-- Table View -->
                     <div id="videos-table" class="hidden">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Видео</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Канал</th>
@@ -258,7 +268,7 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Комментарии</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Вовлеченность</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="videos-table-body" class="bg-white divide-y divide-gray-200">
@@ -270,7 +280,9 @@
                     
                     <!-- Empty State -->
                     <div id="videos-empty" class="hidden text-center py-16">
-                        <i data-lucide="video-off" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="video-off" class="w-8 h-8 text-gray-400"></i>
+                        </div>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">Нет проанализированных видео</h3>
                         <p class="text-gray-500">Создайте задачу для анализа видео</p>
                     </div>
@@ -281,14 +293,14 @@
             <div id="channels" class="panel" style="display: none;">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">Проанализированные каналы</h2>
-                        <button onclick="loadChannels()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                        <h2 class="text-2xl font-semibold text-gray-900">Проанализированные каналы</h2>
+                        <button onclick="loadChannels()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                             <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                         </button>
                     </div>
                     <div id="channels-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div class="col-span-full text-center py-8 text-gray-500">
-                            <i data-lucide="loader" class="w-8 h-8 animate-spin mx-auto mb-4"></i>
+                            <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-4"></i>
                             <p>Загрузка каналов...</p>
                         </div>
                     </div>
@@ -298,30 +310,69 @@
             <!-- Config Panel -->
             <div id="config" class="panel" style="display: none;">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Настройки</h2>
-                    <form id="config-form" class="space-y-6" onsubmit="saveConfig(event)">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-6">Настройки</h2>
+                    <form id="config-form" class="space-y-6 max-w-2xl" onsubmit="saveConfig(event)">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">YouTube API Key</label>
                             <div class="relative">
-                                <input type="password" id="youtube-api-key" class="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="AIzaSy...">
-                                <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600">
+                                <input type="password" id="youtube-api-key" 
+                                       class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
+                                       placeholder="AIzaSy...">
+                                <button type="button" onclick="toggleApiKeyVisibility()" 
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600">
                                     <i data-lucide="eye" class="w-5 h-5" id="api-key-toggle"></i>
                                 </button>
                             </div>
+                            <p class="mt-2 text-xs text-gray-500">
+                                Получите ключ в <a href="https://console.cloud.google.com/" target="_blank" class="text-primary-600 hover:underline">Google Cloud Console</a>
+                            </p>
                         </div>
+                        
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Макс. видео с канала</label>
-                                <input type="number" id="max-long-videos-channel" min="1" max="50" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <input type="number" id="max-long-videos-channel" min="1" max="50" value="5"
+                                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Макс. видео из поиска</label>
-                                <input type="number" id="max-long-videos-search" min="1" max="50" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <input type="number" id="max-long-videos-search" min="1" max="50" value="5"
+                                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Макс. Shorts с канала</label>
+                                <input type="number" id="max-shorts-channel" min="1" max="50" value="5"
+                                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Макс. Shorts из поиска</label>
+                                <input type="number" id="max-shorts-search" min="1" max="50" value="5"
+                                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                             </div>
                         </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" onclick="resetConfig()" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">Сбросить</button>
-                            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">Сохранить</button>
+                        
+                        <div class="pt-4 border-t border-gray-200">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Модель Whisper</label>
+                            <select id="whisper-model" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                <option value="tiny">Tiny (быстрая, низкое качество)</option>
+                                <option value="base" selected>Base (баланс скорости и качества)</option>
+                                <option value="small">Small (хорошее качество)</option>
+                                <option value="medium">Medium (высокое качество)</option>
+                            </select>
+                            <p class="mt-2 text-xs text-gray-500">
+                                Влияет на качество транскрибации видео без субтитров
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-4 pt-4">
+                            <button type="button" onclick="resetConfig()" 
+                                    class="px-4 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                                Сбросить
+                            </button>
+                            <button type="submit" 
+                                    class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                                Сохранить
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -330,48 +381,48 @@
             <!-- Stats Panel -->
             <div id="stats" class="panel" style="display: none;">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Статистика</h2>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-6">Статистика</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-gray-50 rounded-xl p-6">
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-gray-500 text-sm">Всего видео</span>
-                                <i data-lucide="play-circle" class="w-5 h-5 text-primary-500"></i>
+                                <span class="text-gray-600 text-sm">Всего видео</span>
+                                <i data-lucide="play-circle" class="w-5 h-5 text-blue-600"></i>
                             </div>
-                            <p class="text-2xl font-bold text-gray-900" id="total-videos">0</p>
+                            <p class="text-3xl font-bold text-gray-900" id="total-videos">0</p>
                         </div>
-                        <div class="bg-gray-50 rounded-xl p-6">
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-gray-500 text-sm">Каналов</span>
-                                <i data-lucide="tv" class="w-5 h-5 text-primary-500"></i>
+                                <span class="text-gray-600 text-sm">Каналов</span>
+                                <i data-lucide="tv-2" class="w-5 h-5 text-purple-600"></i>
                             </div>
-                            <p class="text-2xl font-bold text-gray-900" id="total-channels">0</p>
+                            <p class="text-3xl font-bold text-gray-900" id="total-channels">0</p>
                         </div>
-                        <div class="bg-gray-50 rounded-xl p-6">
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-gray-500 text-sm">Выполнено задач</span>
-                                <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>
+                                <span class="text-gray-600 text-sm">Выполнено задач</span>
+                                <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
                             </div>
-                            <p class="text-2xl font-bold text-gray-900" id="completed-tasks">0</p>
+                            <p class="text-3xl font-bold text-gray-900" id="completed-tasks">0</p>
                         </div>
-                        <div class="bg-gray-50 rounded-xl p-6">
+                        <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-gray-500 text-sm">Ср. вовлеченность</span>
-                                <i data-lucide="trending-up" class="w-5 h-5 text-green-500"></i>
+                                <span class="text-gray-600 text-sm">Ср. вовлеченность</span>
+                                <i data-lucide="trending-up" class="w-5 h-5 text-orange-600"></i>
                             </div>
-                            <p class="text-2xl font-bold text-gray-900" id="avg-engagement">0%</p>
+                            <p class="text-3xl font-bold text-gray-900" id="avg-engagement">0%</p>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <button onclick="loadStats()" class="inline-flex items-center px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                    <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                        <button onclick="loadStats()" class="inline-flex items-center px-4 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                             <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
                             Обновить
                         </button>
                         <div class="space-x-4">
-                            <button onclick="exportData()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <button onclick="exportData()" class="inline-flex items-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                                 <i data-lucide="download" class="w-4 h-4 mr-2"></i>
                                 Экспорт в Excel
                             </button>
-                            <button onclick="clearDatabase()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <button onclick="clearDatabase()" class="inline-flex items-center px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                                 <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
                                 Очистить БД
                             </button>
@@ -383,25 +434,105 @@
             <!-- Help Panel -->
             <div id="help" class="panel" style="display: none;">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Справка</h2>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-6">Справка</h2>
                     <div class="prose max-w-none">
-                        <h3>Как использовать YouTube Analyzer</h3>
-                        <ol>
-                            <li>Добавьте YouTube API ключ в настройках</li>
-                            <li>Создайте новую задачу с ключевыми словами или каналами</li>
-                            <li>Дождитесь завершения анализа</li>
-                            <li>Изучите результаты в разделах Видео и Каналы</li>
-                            <li>Экспортируйте данные в Excel для дальнейшего анализа</li>
-                        </ol>
-                        
-                        <h3>Функции анализа</h3>
-                        <ul>
-                            <li>Автоматическое получение транскриптов</li>
-                            <li>Анализ ключевых слов и скорости речи</li>
-                            <li>Определение рекламных интеграций</li>
-                            <li>Расчет метрик вовлеченности</li>
-                            <li>Рекомендации по улучшению контента</li>
-                        </ul>
+                        <div class="space-y-8">
+                            <section>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">🚀 Как использовать YouTube Analyzer</h3>
+                                <div class="bg-gray-50 rounded-lg p-6">
+                                    <ol class="space-y-3">
+                                        <li class="flex">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-semibold mr-3">1</span>
+                                            <div>
+                                                <strong>Получите YouTube API ключ</strong>
+                                                <p class="text-sm text-gray-600 mt-1">Перейдите в Google Cloud Console и создайте API ключ для YouTube Data API v3</p>
+                                            </div>
+                                        </li>
+                                        <li class="flex">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-semibold mr-3">2</span>
+                                            <div>
+                                                <strong>Настройте приложение</strong>
+                                                <p class="text-sm text-gray-600 mt-1">Добавьте API ключ в настройках и установите лимиты обработки</p>
+                                            </div>
+                                        </li>
+                                        <li class="flex">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-semibold mr-3">3</span>
+                                            <div>
+                                                <strong>Создайте задачу анализа</strong>
+                                                <p class="text-sm text-gray-600 mt-1">Укажите ключевые слова или URL каналов для анализа</p>
+                                            </div>
+                                        </li>
+                                        <li class="flex">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-semibold mr-3">4</span>
+                                            <div>
+                                                <strong>Изучите результаты</strong>
+                                                <p class="text-sm text-gray-600 mt-1">Просматривайте видео и каналы, экспортируйте данные в Excel</p>
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </section>
+                            
+                            <section>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Функции анализа</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-gray-900 mb-2">Автоматическая транскрибация</h4>
+                                        <p class="text-sm text-gray-600">Получение субтитров YouTube и транскрибация через Whisper AI</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-gray-900 mb-2">Анализ ключевых слов</h4>
+                                        <p class="text-sm text-gray-600">Извлечение важных терминов из транскриптов и описаний</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-gray-900 mb-2">Метрики вовлеченности</h4>
+                                        <p class="text-sm text-gray-600">Расчет engagement rate, соотношений лайков и комментариев</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-gray-900 mb-2">Определение рекламы</h4>
+                                        <p class="text-sm text-gray-600">Автоматическое обнаружение рекламных интеграций</p>
+                                    </div>
+                                </div>
+                            </section>
+                            
+                            <section>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">⚡ Горячие клавиши</h3>
+                                <div class="bg-gray-50 rounded-lg p-6">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between">
+                                            <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs">Ctrl + N</kbd>
+                                            <span class="text-sm text-gray-600">Новая задача</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs">Ctrl + E</kbd>
+                                            <span class="text-sm text-gray-600">Экспорт данных</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs">Ctrl + R</kbd>
+                                            <span class="text-sm text-gray-600">Обновить данные</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                            
+                            <section>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">❓ Частые вопросы</h3>
+                                <div class="space-y-4">
+                                    <details class="border border-gray-200 rounded-lg p-4">
+                                        <summary class="font-medium text-gray-900 cursor-pointer">Сколько видео можно анализировать?</summary>
+                                        <p class="text-sm text-gray-600 mt-2">YouTube API имеет лимит 10,000 запросов в день. Рекомендуем анализировать не более 50-100 видео за раз.</p>
+                                    </details>
+                                    <details class="border border-gray-200 rounded-lg p-4">
+                                        <summary class="font-medium text-gray-900 cursor-pointer">Как работает транскрибация?</summary>
+                                        <p class="text-sm text-gray-600 mt-2">Сначала пытаемся получить субтитры YouTube. Если их нет, используем Whisper AI для транскрибации аудио.</p>
+                                    </details>
+                                    <details class="border border-gray-200 rounded-lg p-4">
+                                        <summary class="font-medium text-gray-900 cursor-pointer">Можно ли поставить задачу на паузу?</summary>
+                                        <p class="text-sm text-gray-600 mt-2">Да, любую активную задачу можно поставить на паузу и возобновить позже с того же места.</p>
+                                    </details>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -411,14 +542,14 @@
     <!-- Video Modal -->
     <div id="videoModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 overflow-y-auto" onclick="if(event.target === this) closeModal()">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-xl">
+            <div class="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-xl">
                 <div class="flex justify-between items-center p-6 border-b border-gray-200">
                     <h2 id="modalTitle" class="text-xl font-semibold text-gray-900"></h2>
-                    <button onclick="closeModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button onclick="closeModal()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
-                <div id="modalBody" class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div id="modalBody" class="p-6 overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar">
                     <!-- Modal content will be dynamically loaded -->
                 </div>
             </div>
@@ -428,947 +559,23 @@
     <!-- Scripts -->
     <script src="app.js"></script>
     <script>
-        // Global variables
-        let allVideos = [];
-        let filteredVideos = [];
-        let currentView = 'grid';
-
-        // Simple tab management
-        function showTab(tabName, button) {
-            // Hide all panels
-            document.querySelectorAll('.panel').forEach(panel => {
-                panel.style.display = 'none';
-            });
-            
-            // Show selected panel
-            const panel = document.getElementById(tabName);
-            if (panel) {
-                panel.style.display = 'block';
-            }
-            
-            // Update active tab
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            if (button) {
-                button.classList.add('active');
-            }
-            
-            // Load data for the tab
-            loadTabData(tabName);
-            
-            // Initialize Lucide icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        
-        // Basic API functions
-        async function loadTabData(tabName) {
-            switch(tabName) {
-                case 'tasks':
-                    await loadTasks();
-                    break;
-                case 'videos':
-                    await loadVideos();
-                    break;
-                case 'channels':
-                    await loadChannels();
-                    break;
-                case 'config':
-                    await loadConfig();
-                    break;
-                case 'stats':
-                    await loadStats();
-                    break;
-            }
-        }
-        
-        async function createTask(event) {
-            event.preventDefault();
-            
-            const keywords = document.getElementById('keywords').value.split('\n').filter(k => k.trim());
-            const channels = document.getElementById('channels').value.split('\n').filter(c => c.trim());
-            const order = document.querySelector('input[name="order"]:checked').value;
-            
-            if (keywords.length === 0 && channels.length === 0) {
-                alert('Введите хотя бы один ключевой запрос или канал');
-                return;
-            }
-            
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            const submitText = document.getElementById('submit-text');
-            const submitSpinner = document.getElementById('submit-spinner');
-            
-            submitBtn.disabled = true;
-            submitText.style.display = 'none';
-            submitSpinner.classList.remove('hidden');
-            
-            try {
-                const response = await fetch('/api/tasks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        keywords: keywords,
-                        channels: channels,
-                        order_by: order
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('Задача создана успешно!');
-                    document.getElementById('task-form').reset();
-                    showTab('tasks', document.querySelector('[data-tab="tasks"]'));
-                } else {
-                    const error = await response.json();
-                    alert('Ошибка: ' + (error.detail || 'Неизвестная ошибка'));
-                }
-            } catch (error) {
-                alert('Ошибка сети: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitText.style.display = 'inline';
-                submitSpinner.classList.add('hidden');
-            }
-        }
-        
-        async function loadTasks() {
-            const taskList = document.getElementById('task-list');
-            const emptyTasks = document.getElementById('empty-tasks');
-            
-            try {
-                const response = await fetch('/api/tasks');
-                const tasks = await response.json();
-                
-                if (tasks.length === 0) {
-                    taskList.innerHTML = '';
-                    taskList.classList.add('hidden');
-                    emptyTasks.classList.remove('hidden');
-                } else {
-                    taskList.classList.remove('hidden');
-                    emptyTasks.classList.add('hidden');
-                    taskList.innerHTML = tasks.map(task => {
-                        const progressPercent = task.total_items > 0 
-                            ? Math.round((task.progress / task.total_items) * 100) 
-                            : 0;
-                        
-                        const statusColors = {
-                            'running': 'bg-green-500',
-                            'paused': 'bg-yellow-500',
-                            'completed': 'bg-blue-500',
-                            'error': 'bg-red-500',
-                            'created': 'bg-gray-500'
-                        };
-                        
-                        const statusIcons = {
-                            'running': 'play-circle',
-                            'paused': 'pause-circle',
-                            'completed': 'check-circle',
-                            'error': 'x-circle',
-                            'created': 'clock'
-                        };
-                        
-                        const statusText = {
-                            'created': 'Создана',
-                            'running': 'Выполняется',
-                            'paused': 'На паузе',
-                            'completed': 'Завершена',
-                            'error': 'Ошибка'
-                        };
-                        
-                        return `
-                            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                                            Задача ${task.task_id.substring(0, 8)}
-                                        </h3>
-                                        <div class="flex items-center gap-3">
-                                            <span class="${statusColors[task.status]} px-3 py-1 rounded-full text-xs font-medium text-white flex items-center gap-1">
-                                                <i data-lucide="${statusIcons[task.status]}" class="w-3 h-3"></i>
-                                                ${statusText[task.status]}
-                                            </span>
-                                            <span class="text-gray-500 text-sm">
-                                                ${formatDate(task.created_at)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        ${task.status === 'running' ? `
-                                            <button onclick="pauseTask('${task.task_id}')" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors">
-                                                <i data-lucide="pause" class="w-4 h-4"></i>
-                                            </button>
-                                        ` : ''}
-                                        ${task.status === 'paused' ? `
-                                            <button onclick="resumeTask('${task.task_id}')" class="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
-                                                <i data-lucide="play" class="w-4 h-4"></i>
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-4">
-                                    <div class="flex justify-between text-sm text-gray-600 mb-2">
-                                        <span>${task.progress} / ${task.total_items} элементов</span>
-                                        <span>${progressPercent}%</span>
-                                    </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                        <div class="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-500"
-                                             style="width: ${progressPercent}%"></div>
-                                    </div>
-                                </div>
-                                
-                                ${task.status === 'error' ? `
-                                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-                                        <p class="text-red-800 text-sm flex items-center">
-                                            <i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i>
-                                            ${task.error_message || 'Произошла ошибка при выполнении задачи'}
-                                        </p>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `;
-                    }).join('');
-                }
-            } catch (error) {
-                taskList.innerHTML = '<div class="text-center py-8 text-red-500">Ошибка загрузки задач</div>';
-            }
-            
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        
-        async function loadVideos() {
-            try {
-                const response = await fetch('/api/data/videos?limit=100');
-                allVideos = await response.json();
-                filteredVideos = [...allVideos];
-                renderVideos();
-            } catch (error) {
-                console.error('Error loading videos:', error);
-                document.getElementById('videos-grid').innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Ошибка загрузки видео</div>';
-            }
-        }
-        
-        function setVideoView(view) {
-            currentView = view;
-            
-            // Update buttons
-            if (view === 'grid') {
-                document.getElementById('view-grid').className = 'px-3 py-1 rounded bg-white text-gray-700 text-sm font-medium';
-                document.getElementById('view-table').className = 'px-3 py-1 rounded text-gray-500 text-sm';
-                document.getElementById('videos-grid').classList.remove('hidden');
-                document.getElementById('videos-table').classList.add('hidden');
-            } else {
-                document.getElementById('view-grid').className = 'px-3 py-1 rounded text-gray-500 text-sm';
-                document.getElementById('view-table').className = 'px-3 py-1 rounded bg-white text-gray-700 text-sm font-medium';
-                document.getElementById('videos-grid').classList.add('hidden');
-                document.getElementById('videos-table').classList.remove('hidden');
-            }
-            
-            renderVideos();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-        
-        function filterVideos() {
-            const searchTerm = document.getElementById('video-search').value.toLowerCase();
-            const typeFilter = document.getElementById('video-type-filter').value;
-            
-            filteredVideos = allVideos.filter(video => {
-                const matchesSearch = video.title.toLowerCase().includes(searchTerm) || 
-                                    (video.channel_title && video.channel_title.toLowerCase().includes(searchTerm));
-                const matchesType = !typeFilter || 
-                                  (typeFilter === 'short' && video.is_short) || 
-                                  (typeFilter === 'long' && !video.is_short);
-                return matchesSearch && matchesType;
-            });
-            
-            renderVideos();
-        }
-        
-        function sortVideos() {
-            const sortBy = document.getElementById('video-sort').value;
-            
-            filteredVideos.sort((a, b) => {
-                switch(sortBy) {
-                    case 'views':
-                        return (b.views || 0) - (a.views || 0);
-                    case 'engagement':
-                        return (b.engagement_rate || 0) - (a.engagement_rate || 0);
-                    case 'likes':
-                        return (b.likes || 0) - (a.likes || 0);
-                    case 'date':
-                    default:
-                        return new Date(b.analyzed_at || b.created_at) - new Date(a.analyzed_at || a.created_at);
-                }
-            });
-            
-            renderVideos();
-        }
-        
-        function renderVideos() {
-            if (filteredVideos.length === 0) {
-                document.getElementById('videos-grid').classList.add('hidden');
-                document.getElementById('videos-table').classList.add('hidden');
-                document.getElementById('videos-empty').classList.remove('hidden');
-                return;
-            }
-            
-            document.getElementById('videos-empty').classList.add('hidden');
-            
-            if (currentView === 'grid') {
-                renderGridView();
-            } else {
-                renderTableView();
-            }
-            
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-        
-        function renderGridView() {
-            const grid = document.getElementById('videos-grid');
-            
-            grid.innerHTML = filteredVideos.map(video => `
-                <div class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                     onclick="showVideoDetails('${video.video_id}')">
-                    <div class="aspect-video bg-gray-100 relative">
-                        ${video.thumbnail_url ? `
-                            <img src="${video.thumbnail_url}" alt="${video.title}" class="w-full h-full object-cover">
-                        ` : `
-                            <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="video" class="w-12 h-12 text-gray-400"></i>
-                            </div>
-                        `}
-                        <div class="absolute bottom-2 right-2">
-                            ${video.is_short ? `
-                                <span class="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">SHORT</span>
-                            ` : `
-                                <span class="bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs">
-                                    ${formatDuration(video.duration)}
-                                </span>
-                            `}
-                        </div>
-                    </div>
-                    
-                    <div class="p-4">
-                        <h3 class="font-medium text-gray-900 mb-2 line-clamp-2" title="${video.title}">
-                            ${video.title}
-                        </h3>
-                        
-                        <p class="text-sm text-gray-600 mb-3">
-                            ${video.channel_title || 'Неизвестный канал'}
-                        </p>
-                        
-                        <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
-                            <span>${formatNumber(video.views)} просмотров</span>
-                            <span>${formatDate(video.publish_date)}</span>
-                        </div>
-                        
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3 text-sm">
-                                <span class="flex items-center">
-                                    <i data-lucide="thumbs-up" class="w-4 h-4 mr-1 text-gray-400"></i>
-                                    ${formatNumber(video.likes)}
-                                </span>
-                                <span class="flex items-center">
-                                    <i data-lucide="message-circle" class="w-4 h-4 mr-1 text-gray-400"></i>
-                                    ${formatNumber(video.comments)}
-                                </span>
-                            </div>
-                            
-                            <span class="text-sm font-medium ${getEngagementColor(video.engagement_rate)}">
-                                ${video.engagement_rate ? video.engagement_rate.toFixed(1) + '%' : '0%'}
-                            </span>
-                        </div>
-                        
-                        ${video.transcript_source ? `
-                            <div class="mt-3 flex items-center text-xs text-gray-500">
-                                <i data-lucide="file-text" class="w-3 h-3 mr-1"></i>
-                                ${video.transcript_source === 'none' ? 'Нет транскрипта' : 'Транскрипт: ' + video.transcript_source}
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function renderTableView() {
-            const tbody = document.getElementById('videos-table-body');
-            
-            tbody.innerHTML = filteredVideos.map(video => `
-                <tr class="hover:bg-gray-50 cursor-pointer" onclick="showVideoDetails('${video.video_id}')">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            ${video.thumbnail_url ? `
-                                <img src="${video.thumbnail_url}" alt="" class="w-16 h-9 object-cover rounded mr-3">
-                            ` : `
-                                <div class="w-16 h-9 bg-gray-200 rounded mr-3 flex items-center justify-center">
-                                    <i data-lucide="video" class="w-6 h-4 text-gray-400"></i>
-                                </div>
-                            `}
-                            <div class="max-w-xs">
-                                <div class="text-sm font-medium text-gray-900 truncate">${video.title}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${video.channel_title || '-'}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        ${video.is_short ? 
-                            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">SHORT</span>' : 
-                            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">VIDEO</span>'
-                        }
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${formatNumber(video.views)}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${formatNumber(video.likes)}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${formatNumber(video.comments)}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="text-sm font-medium ${getEngagementColor(video.engagement_rate)}">
-                            ${video.engagement_rate ? video.engagement_rate.toFixed(2) + '%' : '0%'}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${formatDate(video.publish_date)}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="https://youtube.com/watch?v=${video.video_id}" target="_blank" 
-                           class="text-primary-600 hover:text-primary-900" onclick="event.stopPropagation()">
-                            <i data-lucide="external-link" class="w-4 h-4"></i>
-                        </a>
-                    </td>
-                </tr>
-            `).join('');
-        }
-        
-        async function showVideoDetails(videoId) {
-            const video = allVideos.find(v => v.video_id === videoId);
-            if (!video) return;
-            
-            document.getElementById('modalTitle').textContent = video.title;
-            document.getElementById('modalBody').innerHTML = `
-                <div class="space-y-6">
-                    <!-- Video Preview -->
-                    <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                        <iframe 
-                            src="https://www.youtube.com/embed/${video.video_id}" 
-                            frameborder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                            allowfullscreen
-                            class="w-full h-full">
-                        </iframe>
-                    </div>
-                    
-                    <!-- Basic Info -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-3">Основная информация</h4>
-                            <dl class="space-y-2">
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Канал:</dt>
-                                    <dd class="text-sm font-medium">${video.channel_title}</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Тип:</dt>
-                                    <dd class="text-sm font-medium">${video.is_short ? 'SHORT' : 'Обычное видео'}</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Длительность:</dt>
-                                    <dd class="text-sm font-medium">${formatDuration(video.duration)}</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Опубликовано:</dt>
-                                    <dd class="text-sm font-medium">${formatDate(video.publish_date)}</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Качество:</dt>
-                                    <dd class="text-sm font-medium">${video.video_quality || 'SD'}</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Субтитры:</dt>
-                                    <dd class="text-sm font-medium">${video.has_cc ? '✅ Есть' : '❌ Нет'}</dd>
-                                </div>
-                            </dl>
-                        </div>
-                        
-                        <!-- Metrics -->
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-3">Метрики</h4>
-                            <dl class="space-y-2">
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Просмотры:</dt>
-                                    <dd class="text-sm font-medium">${formatNumber(video.views)}</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Лайки:</dt>
-                                    <dd class="text-sm font-medium">${formatNumber(video.likes)} (${video.like_ratio?.toFixed(2) || 0}%)</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Комментарии:</dt>
-                                    <dd class="text-sm font-medium">${formatNumber(video.comments)} (${video.comment_ratio?.toFixed(2) || 0}%)</dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Вовлеченность:</dt>
-                                    <dd class="text-sm font-medium ${getEngagementColor(video.engagement_rate)}">${video.engagement_rate?.toFixed(2) || 0}%</dd>
-                                </div>
-                                ${video.speech_speed ? `
-                                <div class="flex justify-between">
-                                    <dt class="text-sm text-gray-600">Скорость речи:</dt>
-                                    <dd class="text-sm font-medium">${video.speech_speed} слов/мин</dd>
-                                </div>
-                                ` : ''}
-                            </dl>
-                        </div>
-                    </div>
-                    
-                    <!-- Description -->
-                    ${video.description ? `
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Описание</h4>
-                            <div class="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
-                                <p class="text-sm text-gray-700 whitespace-pre-wrap">${video.description}</p>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">
-                                Длина: ${video.description_length || video.description.length} символов | 
-                                Ссылок: ${video.links_count || 0}
-                            </p>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Keywords -->
-                    ${video.keywords && video.keywords.length > 0 ? `
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Ключевые слова из транскрипта</h4>
-                            <div class="flex flex-wrap gap-2">
-                                ${video.keywords.map(keyword => `
-                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">${keyword}</span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Tags -->
-                    ${video.tags && video.tags.length > 0 ? `
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Теги видео</h4>
-                            <div class="flex flex-wrap gap-2">
-                                ${video.tags.map(tag => `
-                                    <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">${tag}</span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Transcript -->
-                    ${video.transcript ? `
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">
-                                Транскрипт 
-                                <span class="text-sm font-normal text-gray-500">(${video.transcript_source})</span>
-                            </h4>
-                            <div class="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto">
-                                <p class="text-sm text-gray-700 whitespace-pre-wrap">${video.transcript.substring(0, 2000)}${video.transcript.length > 2000 ? '...' : ''}</p>
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Analysis -->
-                    ${video.recommendations || video.success_analysis ? `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${video.recommendations ? `
-                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                    <h4 class="font-semibold text-yellow-900 mb-2">💡 Рекомендации</h4>
-                                    <p class="text-sm text-yellow-800">${video.recommendations}</p>
-                                </div>
-                            ` : ''}
-                            
-                            ${video.success_analysis ? `
-                                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                                    <h4 class="font-semibold text-green-900 mb-2">📊 Анализ успеха</h4>
-                                    <p class="text-sm text-green-800">${video.success_analysis}</p>
-                                </div>
-                            ` : ''}
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Additional Info -->
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h4 class="font-semibold text-gray-900 mb-2">Дополнительная информация</h4>
-                        <dl class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <dt class="text-gray-600">ID видео:</dt>
-                                <dd class="font-mono">${video.video_id}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-600">ID канала:</dt>
-                                <dd class="font-mono">${video.channel_id}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-600">Категория:</dt>
-                                <dd>${video.category_id || 'Не указана'}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-600">Анализ проведен:</dt>
-                                <dd>${formatDate(video.analyzed_at)}</dd>
-                            </div>
-                            ${video.has_branding !== undefined ? `
-                            <div>
-                                <dt class="text-gray-600">Реклама/спонсоры:</dt>
-                                <dd>${video.has_branding ? '✅ Обнаружена' : '❌ Не обнаружена'}</dd>
-                            </div>
-                            ` : ''}
-                            ${video.has_emoji !== undefined ? `
-                            <div>
-                                <dt class="text-gray-600">Эмодзи в заголовке:</dt>
-                                <dd>${video.has_emoji ? '✅ Есть' : '❌ Нет'}</dd>
-                            </div>
-                            ` : ''}
-                        </dl>
-                    </div>
-                    
-                    <!-- Actions -->
-                    <div class="flex justify-between items-center pt-4 border-t border-gray-200">
-                        <div class="flex space-x-4">
-                            <a href="https://youtube.com/watch?v=${video.video_id}" target="_blank" 
-                               class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                                <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
-                                Открыть на YouTube
-                            </a>
-                            <a href="https://youtube.com/channel/${video.channel_id}" target="_blank" 
-                               class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-                                <i data-lucide="tv" class="w-4 h-4 mr-2"></i>
-                                Перейти на канал
-                            </a>
-                        </div>
-                        <button onclick="closeModal()" 
-                                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-                            Закрыть
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('videoModal').classList.remove('hidden');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-        
-        async function loadChannels() {
-            const channelsGrid = document.getElementById('channels-grid');
-            
-            try {
-                const response = await fetch('/api/data/channels');
-                const channels = await response.json();
-                
-                if (channels.length === 0) {
-                    channelsGrid.innerHTML = `
-                        <div class="col-span-full text-center py-16">
-                            <i data-lucide="tv" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">Нет проанализированных каналов</h3>
-                            <p class="text-gray-500">Создайте задачу для анализа каналов</p>
-                        </div>
-                    `;
-                } else {
-                    channelsGrid.innerHTML = channels.map(channel => `
-                        <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-                            <div class="flex items-center space-x-4 mb-4">
-                                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                    <i data-lucide="tv" class="w-6 h-6 text-red-600"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <h3 class="font-semibold text-gray-900 mb-1">${channel.channel_title}</h3>
-                                    <p class="text-sm text-gray-500">${formatNumber(channel.subscriber_count)} подписчиков</p>
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-3 mb-4">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-600">Видео:</span>
-                                    <span>${formatNumber(channel.video_count)}</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-600">Просмотры:</span>
-                                    <span>${formatNumber(channel.view_count)}</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-600">Проанализировано:</span>
-                                    <span class="font-medium">${channel.analyzed_videos}</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-600">Средние просмотры:</span>
-                                    <span>${formatNumber(channel.avg_views || 0)}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="flex justify-between items-center">
-                                <span class="text-xs text-gray-500">
-                                    Обновлено: ${formatDate(channel.last_updated)}
-                                </span>
-                                <a href="${channel.channel_url}" target="_blank" 
-                                   class="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm">
-                                    <i data-lucide="external-link" class="w-3 h-3 mr-1"></i>
-                                    Открыть
-                                </a>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                channelsGrid.innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Ошибка загрузки каналов</div>';
-            }
-            
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        
-        async function loadConfig() {
-            try {
-                const response = await fetch('/api/config');
-                const config = await response.json();
-                
-                document.getElementById('youtube-api-key').value = config.youtube_api_key === '***' ? '' : config.youtube_api_key;
-                document.getElementById('youtube-api-key').placeholder = config.youtube_api_key === '***' ? 'API ключ установлен' : 'AIzaSy...';
-                document.getElementById('max-long-videos-channel').value = config.max_long_videos_channel || 5;
-                document.getElementById('max-long-videos-search').value = config.max_long_videos_search || 5;
-            } catch (error) {
-                console.error('Ошибка загрузки конфигурации:', error);
-            }
-        }
-        
-        async function saveConfig(event) {
-            event.preventDefault();
-            
-            const apiKeyInput = document.getElementById('youtube-api-key');
-            const config = {
-                max_long_videos_channel: parseInt(document.getElementById('max-long-videos-channel').value),
-                max_long_videos_search: parseInt(document.getElementById('max-long-videos-search').value)
-            };
-            
-            // Добавляем API ключ только если он изменен
-            if (apiKeyInput.value && apiKeyInput.value !== '') {
-                config.youtube_api_key = apiKeyInput.value;
-            }
-            
-            try {
-                const response = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                });
-                
-                if (response.ok) {
-                    alert('Настройки сохранены успешно!');
-                    await loadConfig(); // Перезагрузить конфигурацию
-                } else {
-                    const error = await response.json();
-                    alert('Ошибка сохранения настроек: ' + (error.detail || 'Неизвестная ошибка'));
-                }
-            } catch (error) {
-                alert('Ошибка сети: ' + error.message);
-            }
-        }
-        
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/data/stats');
-                const stats = await response.json();
-                
-                document.getElementById('total-videos').textContent = stats.total_videos || 0;
-                document.getElementById('total-channels').textContent = stats.total_channels || 0;
-                document.getElementById('completed-tasks').textContent = stats.completed_tasks || 0;
-                document.getElementById('avg-engagement').textContent = (stats.avg_engagement || 0) + '%';
-            } catch (error) {
-                console.error('Ошибка загрузки статистики:', error);
-            }
-        }
-        
-        async function exportData() {
-            try {
-                const btn = event.target.closest('button');
-                const originalContent = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 mr-2 animate-spin inline"></i>Экспорт...';
-                
-                const response = await fetch('/api/data/export');
-                const result = await response.json();
-                
-                if (response.ok && result.filename) {
-                    // Скачать файл
-                    const link = document.createElement('a');
-                    link.href = `/api/data/export/download/${result.filename}`;
-                    link.download = result.filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    alert(`Файл ${result.filename} готов к скачиванию!`);
-                } else {
-                    alert('Ошибка экспорта: ' + (result.detail || 'Неизвестная ошибка'));
-                }
-            } catch (error) {
-                alert('Ошибка экспорта: ' + error.message);
-            } finally {
-                const btn = event.target.closest('button');
-                btn.disabled = false;
-                btn.innerHTML = '<i data-lucide="download" class="w-4 h-4 mr-2"></i>Экспорт в Excel';
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        }
-        
-        async function clearDatabase() {
-            if (confirm('Вы уверены? Все данные будут удалены безвозвратно!')) {
-                try {
-                    const response = await fetch('/api/data/clear', { method: 'DELETE' });
-                    if (response.ok) {
-                        alert('База данных очищена');
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Ошибка: ' + (error.detail || 'Неизвестная ошибка'));
-                    }
-                } catch (error) {
-                    alert('Ошибка: ' + error.message);
-                }
-            }
-        }
-        
-        // Helper functions
-        function formatNumber(num) {
-            if (!num) return '0';
-            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-            return num.toString();
-        }
-        
-        function formatDuration(duration) {
-            if (!duration) return '0:00';
-            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            if (!match) return duration;
-            
-            const hours = parseInt(match[1] || 0);
-            const minutes = parseInt(match[2] || 0);
-            const seconds = parseInt(match[3] || 0);
-            
-            if (hours > 0) {
-                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('ru-RU');
-        }
-        
-        function getEngagementColor(rate) {
-            if (!rate) return 'text-gray-500';
-            if (rate >= 5) return 'text-green-600';
-            if (rate >= 2) return 'text-yellow-600';
-            return 'text-red-600';
-        }
-        
-        function toggleApiKeyVisibility() {
-            const input = document.getElementById('youtube-api-key');
-            const icon = document.getElementById('api-key-toggle');
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.setAttribute('data-lucide', 'eye-off');
-            } else {
-                input.type = 'password';
-                icon.setAttribute('data-lucide', 'eye');
-            }
-            
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        
-        function closeModal() {
-            document.getElementById('videoModal').classList.add('hidden');
-        }
-        
-        function resetConfig() {
-            if (confirm('Сбросить настройки к значениям по умолчанию?')) {
-                document.getElementById('max-long-videos-channel').value = 5;
-                document.getElementById('max-long-videos-search').value = 5;
-            }
-        }
-        
-        async function pauseTask(taskId) {
-            try {
-                const response = await fetch(`/api/tasks/${taskId}/pause`, { method: 'POST' });
-                if (response.ok) {
-                    await loadTasks();
-                } else {
-                    const error = await response.json();
-                    alert('Ошибка: ' + (error.detail || 'Не удалось поставить задачу на паузу'));
-                }
-            } catch (error) {
-                alert('Ошибка сети: ' + error.message);
-            }
-        }
-        
-        async function resumeTask(taskId) {
-            try {
-                const response = await fetch(`/api/tasks/${taskId}/resume`, { method: 'POST' });
-                if (response.ok) {
-                    await loadTasks();
-                } else {
-                    const error = await response.json();
-                    alert('Ошибка: ' + (error.detail || 'Не удалось возобновить задачу'));
-                }
-            } catch (error) {
-                alert('Ошибка сети: ' + error.message);
-            }
-        }
-        
-        // Auto-refresh tasks
-        let tasksRefreshInterval;
-        function startTasksAutoRefresh() {
-            if (tasksRefreshInterval) clearInterval(tasksRefreshInterval);
-            
-            tasksRefreshInterval = setInterval(() => {
-                const activeTab = document.querySelector('.nav-tab.active');
-                if (activeTab && activeTab.getAttribute('data-tab') === 'tasks') {
-                    loadTasks();
-                }
-            }, 5000); // Обновлять каждые 5 секунд
-        }
-        
-        // Initialize on load
+        // Initialize Lucide icons
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
-            
-            // Load initial config
-            loadConfig();
-            
-            // Start auto-refresh for tasks
-            startTasksAutoRefresh();
-            
-            // Check if app.js loaded
-            setTimeout(() => {
-                if (typeof apiClient === 'undefined') {
-                    console.log('Используется встроенная версия функций (app.js не загружен)');
-                } else {
-                    console.log('app.js загружен успешно');
-                }
-            }, 1000);
         });
         
-        // Clean up interval on page unload
-        window.addEventListener('beforeunload', () => {
-            if (tasksRefreshInterval) clearInterval(tasksRefreshInterval);
+        // Re-initialize icons after dynamic content
+        const observer = new MutationObserver(() => {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
         });
     </script>
 </body>
