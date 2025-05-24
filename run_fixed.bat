@@ -7,7 +7,7 @@ cd /d "%~dp0"
 if exist "venv\Scripts\activate.bat" (
     call venv\Scripts\activate.bat
 ) else (
-    echo Создаем виртуальное окружение...
+    echo Creating virtual environment...
     python -m venv venv
     call venv\Scripts\activate.bat
     pip install -r requirements.txt
@@ -18,7 +18,7 @@ echo =======================================
 echo    YouTube Analyzer - Fixed Version
 echo =======================================
 echo.
-echo Запускаем исправленный сервер...
+echo Starting fixed server...
 echo.
 
 python backend/fixed_server.py

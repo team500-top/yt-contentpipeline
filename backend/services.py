@@ -386,6 +386,9 @@ async def process_task_with_checkpoints(task_id: str, task: TaskCreate, resume: 
         checkpoint = db.get_task_checkpoint(task_id) if resume else None
         
 
+    except Exception as e:
+        print(f'Ошибка: {e}')
+        pass
 items_processed_data = current_task.get('items_processed', '[]')
 items_failed_data = current_task.get('items_failed', '[]')
 
