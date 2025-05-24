@@ -1,6 +1,6 @@
 /**
  * YouTube Analyzer - Frontend Application
- * Исправленная версия без зависаний
+ * Исправленная версия с защитой от null ошибок
  */
 
 // ============ CONFIGURATION ============
@@ -194,6 +194,8 @@ class Utils {
     }
 
     static showLoading(element, show = true) {
+        if (!element) return;
+        
         if (show) {
             element.innerHTML = `
                 <div class="flex items-center justify-center py-8">
@@ -207,6 +209,8 @@ class Utils {
 
 // ============ SIMPLIFIED TAB MANAGEMENT ============
 window.showTab = function(tabName, button) {
+    console.log('showTab called:', tabName);
+    
     // Hide all panels
     document.querySelectorAll('.panel').forEach(panel => {
         panel.style.display = 'none';
@@ -256,18 +260,28 @@ window.showTab = function(tabName, button) {
 // ============ GLOBAL FUNCTIONS ============
 window.createTask = async function(event) {
     event.preventDefault();
+    console.log('createTask called');
     
-    const keywords = document.getElementById('keywords').value
+    const keywordsEl = document.getElementById('keywords');
+    const channelsEl = document.getElementById('channels');
+    const orderEl = document.querySelector('input[name="order"]:checked');
+    
+    if (!keywordsEl || !channelsEl || !orderEl) {
+        console.error('Form elements not found');
+        return;
+    }
+    
+    const keywords = keywordsEl.value
         .split('\n')
         .map(k => k.trim())
         .filter(k => k);
         
-    const channels = document.getElementById('channels').value
+    const channels = channelsEl.value
         .split('\n')
         .map(c => c.trim())
         .filter(c => c);
         
-    const orderBy = document.querySelector('input[name="order"]:checked').value;
+    const orderBy = orderEl.value;
     
     if (keywords.length === 0 && channels.length === 0) {
         Utils.showAlert('Введите хотя бы один ключевой запрос или канал', 'error');
@@ -278,7 +292,7 @@ window.createTask = async function(event) {
     const submitText = document.getElementById('submit-text');
     const submitSpinner = document.getElementById('submit-spinner');
     
-    submitBtn.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
     if (submitText) submitText.style.display = 'none';
     if (submitSpinner) submitSpinner.classList.remove('hidden');
     
@@ -290,19 +304,26 @@ window.createTask = async function(event) {
         });
         
         Utils.showAlert('Задача успешно создана!', 'success');
-        document.getElementById('task-form').reset();
-        showTab('tasks', document.querySelector('[data-tab="tasks"]'));
+        
+        const form = document.getElementById('task-form');
+        if (form) form.reset();
+        
+        const tasksTab = document.querySelector('[data-tab="tasks"]');
+        if (tasksTab) {
+            showTab('tasks', tasksTab);
+        }
         
     } catch (error) {
         Utils.showAlert('Ошибка при создании задачи: ' + error.message, 'error');
     } finally {
-        submitBtn.disabled = false;
+        if (submitBtn) submitBtn.disabled = false;
         if (submitText) submitText.style.display = 'inline';
         if (submitSpinner) submitSpinner.classList.add('hidden');
     }
 };
 
 window.loadTasks = async function() {
+    console.log('loadTasks called');
     const taskList = document.getElementById('task-list');
     const emptyTasks = document.getElementById('empty-tasks');
     
@@ -440,6 +461,7 @@ window.resumeTask = async function(taskId) {
 };
 
 window.loadVideos = async function() {
+    console.log('loadVideos called');
     const videosGrid = document.getElementById('videos-grid');
     const videosLoading = document.getElementById('videos-loading');
     
@@ -479,6 +501,9 @@ window.renderVideos = function() {
                 <p class="text-gray-500">Попробуйте изменить фильтры или создать новую задачу</p>
             </div>
         `;
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
         return;
     }
 
@@ -551,7 +576,7 @@ function renderVideoCard(video) {
 }
 
 window.filterVideos = function() {
-    const searchTerm = document.getElementById('video-search')?.value.toLowerCase() || '';
+    const searchTerm = (document.getElementById('video-search')?.value || '').toLowerCase();
     const typeFilter = document.getElementById('video-type-filter')?.value || '';
     
     window.filteredVideos = window.allVideos.filter(video => {
@@ -588,9 +613,13 @@ window.showVideoDetails = async function(videoId) {
     try {
         const video = await window.apiClient.getVideoDetails(videoId);
         
-        document.getElementById('modalTitle').textContent = video.title;
-        document.getElementById('modalBody').innerHTML = renderVideoDetails(video);
-        document.getElementById('videoModal').classList.remove('hidden');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const videoModal = document.getElementById('videoModal');
+        
+        if (modalTitle) modalTitle.textContent = video.title;
+        if (modalBody) modalBody.innerHTML = renderVideoDetails(video);
+        if (videoModal) videoModal.classList.remove('hidden');
         
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
@@ -688,6 +717,7 @@ window.closeModal = function() {
 };
 
 window.loadChannels = async function() {
+    console.log('loadChannels called');
     const channelsGrid = document.getElementById('channels-grid');
     if (!channelsGrid || !window.apiClient) return;
     
@@ -762,18 +792,30 @@ function renderChannelCard(channel) {
 }
 
 window.loadConfig = async function() {
+    console.log('loadConfig called');
     if (!window.apiClient) return;
     
     try {
         const config = await window.apiClient.getConfig();
         
-        document.getElementById('youtube-api-key').value = config.youtube_api_key === '***' ? '' : config.youtube_api_key || '';
-        document.getElementById('youtube-api-key').placeholder = config.youtube_api_key === '***' ? 'API ключ установлен' : 'AIzaSy...';
-        document.getElementById('max-long-videos-channel').value = config.max_long_videos_channel || 5;
-        document.getElementById('max-long-videos-search').value = config.max_long_videos_search || 5;
-        document.getElementById('max-shorts-channel').value = config.max_shorts_channel || 5;
-        document.getElementById('max-shorts-search').value = config.max_shorts_search || 5;
-        document.getElementById('whisper-model').value = config.whisper_model || 'base';
+        const apiKeyEl = document.getElementById('youtube-api-key');
+        if (apiKeyEl) {
+            apiKeyEl.value = config.youtube_api_key === '***' ? '' : config.youtube_api_key || '';
+            apiKeyEl.placeholder = config.youtube_api_key === '***' ? 'API ключ установлен' : 'AIzaSy...';
+        }
+        
+        const fields = {
+            'max-long-videos-channel': config.max_long_videos_channel || 5,
+            'max-long-videos-search': config.max_long_videos_search || 5,
+            'max-shorts-channel': config.max_shorts_channel || 5,
+            'max-shorts-search': config.max_shorts_search || 5,
+            'whisper-model': config.whisper_model || 'base'
+        };
+        
+        for (const [id, value] of Object.entries(fields)) {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        }
     } catch (error) {
         console.error('Ошибка загрузки конфигурации:', error);
     }
@@ -781,20 +823,21 @@ window.loadConfig = async function() {
 
 window.saveConfig = async function(event) {
     event.preventDefault();
+    console.log('saveConfig called');
     
     if (!window.apiClient) return;
     
     const apiKeyInput = document.getElementById('youtube-api-key');
     const config = {
-        max_long_videos_channel: parseInt(document.getElementById('max-long-videos-channel').value),
-        max_long_videos_search: parseInt(document.getElementById('max-long-videos-search').value),
-        max_shorts_channel: parseInt(document.getElementById('max-shorts-channel').value),
-        max_shorts_search: parseInt(document.getElementById('max-shorts-search').value),
-        whisper_model: document.getElementById('whisper-model').value
+        max_long_videos_channel: parseInt(document.getElementById('max-long-videos-channel')?.value || 5),
+        max_long_videos_search: parseInt(document.getElementById('max-long-videos-search')?.value || 5),
+        max_shorts_channel: parseInt(document.getElementById('max-shorts-channel')?.value || 5),
+        max_shorts_search: parseInt(document.getElementById('max-shorts-search')?.value || 5),
+        whisper_model: document.getElementById('whisper-model')?.value || 'base'
     };
     
     // Добавляем API ключ только если он изменен
-    if (apiKeyInput.value && apiKeyInput.value !== '') {
+    if (apiKeyInput && apiKeyInput.value && apiKeyInput.value !== '') {
         config.youtube_api_key = apiKeyInput.value;
     }
     
@@ -808,15 +851,23 @@ window.saveConfig = async function(event) {
 };
 
 window.loadStats = async function() {
+    console.log('loadStats called');
     if (!window.apiClient) return;
     
     try {
         const stats = await window.apiClient.getStats();
         
-        document.getElementById('total-videos').textContent = stats.total_videos || 0;
-        document.getElementById('total-channels').textContent = stats.total_channels || 0;
-        document.getElementById('completed-tasks').textContent = stats.completed_tasks || 0;
-        document.getElementById('avg-engagement').textContent = (stats.avg_engagement || 0) + '%';
+        const elements = {
+            'total-videos': stats.total_videos || 0,
+            'total-channels': stats.total_channels || 0,
+            'completed-tasks': stats.completed_tasks || 0,
+            'avg-engagement': (stats.avg_engagement || 0) + '%'
+        };
+        
+        for (const [id, value] of Object.entries(elements)) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
     }
@@ -885,11 +936,19 @@ window.toggleApiKeyVisibility = function() {
 
 window.resetConfig = function() {
     if (confirm('Сбросить настройки к значениям по умолчанию?')) {
-        document.getElementById('max-long-videos-channel').value = 5;
-        document.getElementById('max-long-videos-search').value = 5;
-        document.getElementById('max-shorts-channel').value = 5;
-        document.getElementById('max-shorts-search').value = 5;
-        document.getElementById('whisper-model').value = 'base';
+        const defaults = {
+            'max-long-videos-channel': 5,
+            'max-long-videos-search': 5,
+            'max-shorts-channel': 5,
+            'max-shorts-search': 5,
+            'whisper-model': 'base'
+        };
+        
+        for (const [id, value] of Object.entries(defaults)) {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        }
+        
         Utils.showAlert('Настройки сброшены к значениям по умолчанию', 'info');
     }
 };
@@ -901,21 +960,37 @@ window.setVideoView = function(view) {
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize API client
-    window.apiClient = new ApiClient();
+    console.log('DOM loaded, initializing...');
     
-    // Initialize Lucide icons
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-    
-    // Set up auto-update for tasks
-    setInterval(async () => {
-        const activeTab = document.querySelector('.nav-tab.active');
-        if (activeTab && activeTab.getAttribute('data-tab') === 'tasks') {
-            await loadTasks();
+    try {
+        // Initialize API client
+        window.apiClient = new ApiClient();
+        console.log('✅ ApiClient created');
+        
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+            console.log('✅ Lucide icons initialized');
+        } else {
+            console.warn('⚠️ Lucide not loaded');
         }
-    }, CONFIG.UPDATE_INTERVAL);
-    
-    console.log('✅ YouTube Analyzer Frontend загружен успешно');
+        
+        // Set up auto-update for tasks
+        setInterval(async () => {
+            const activeTab = document.querySelector('.nav-tab.active');
+            if (activeTab && activeTab.getAttribute('data-tab') === 'tasks') {
+                await loadTasks();
+            }
+        }, CONFIG.UPDATE_INTERVAL);
+        
+        console.log('✅ YouTube Analyzer Frontend загружен успешно');
+    } catch (error) {
+        console.error('❌ Ошибка инициализации:', error);
+    }
 });
+
+// Экспортируем в глобальную область для отладки
+window.ApiClient = ApiClient;
+window.Utils = Utils;
+window.CONFIG = CONFIG;
+window.STATE = STATE;
