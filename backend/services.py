@@ -385,9 +385,26 @@ async def process_task_with_checkpoints(task_id: str, task: TaskCreate, resume: 
         current_task = db.get_task(task_id)
         checkpoint = db.get_task_checkpoint(task_id) if resume else None
         
-        processed_items = set(json.loads(current_task.get('items_processed', '[]')))
-        failed_items = set(json.loads(current_task.get('items_failed', '[]')))
-        
+
+items_processed_data = current_task.get('items_processed', '[]')
+items_failed_data = current_task.get('items_failed', '[]')
+
+# Проверяем тип данных перед парсингом
+if isinstance(items_processed_data, str):
+    processed_items = set(json.loads(items_processed_data))
+elif isinstance(items_processed_data, list):
+    processed_items = set(items_processed_data)
+else:
+    processed_items = set()
+
+if isinstance(items_failed_data, str):
+    failed_items = set(json.loads(items_failed_data))
+elif isinstance(items_failed_data, list):
+    failed_items = set(items_failed_data)
+else:
+    failed_items = set()
+
+      
         # Восстановить прогресс из чекпоинта
         if checkpoint and 'processed_items' in checkpoint:
             processed_items.update(checkpoint['processed_items'])

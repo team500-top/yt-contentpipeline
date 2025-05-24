@@ -1,30 +1,30 @@
 """
-YouTube Analyzer - Main FastAPI Server
-Объединенный сервер для локального запуска
+YouTube Analyzer - Fixed Server
+Исправленная версия с правильной обработкой статических файлов
 """
-from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
-# ВАЖНО: Добавляем все необходимые импорты Response классов
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 import sys
 from pathlib import Path
+import json
 
 # Добавить пути для импорта
 current_dir = Path(__file__).parent
 project_root = current_dir.parent
 sys.path.append(str(project_root))
 
-# Создание приложения - ВАЖНО: это должно быть ДО любых декораторов @app
+# Создание приложения
 app = FastAPI(
     title="YouTube Content Analyzer",
     description="Анализ YouTube контента и трендов",
     version="2.0.0"
 )
 
-# CORS middleware - разрешаем все источники для локальной разработки
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -68,11 +68,6 @@ async def root():
         return FileResponse(str(index_path), media_type="text/html")
     return HTMLResponse("<h1>YouTube Analyzer</h1><p>Frontend не найден</p>")
 
-@app.get("/index.html")
-async def get_index():
-    """Альтернативный путь для index.html"""
-    return await root()
-
 # Статические файлы JavaScript и CSS
 @app.get("/app.js")
 async def get_app_js():
@@ -84,7 +79,7 @@ async def get_app_js():
             media_type="application/javascript",
             headers={"Cache-Control": "no-cache"}
         )
-    return HTMLResponse("console.error('app.js not found');", media_type="application/javascript")
+    return JSONResponse({"error": "app.js not found"}, status_code=404)
 
 @app.get("/style.css")
 async def get_style_css():
@@ -96,24 +91,33 @@ async def get_style_css():
             media_type="text/css",
             headers={"Cache-Control": "no-cache"}
         )
-    return HTMLResponse("/* style.css not found */", media_type="text/css")
+    return JSONResponse({"error": "style.css not found"}, status_code=404)
+
+# Обработчик для всех HTML файлов
+@app.get("/{filename}.html")
+async def get_html_file(filename: str):
+    """Обработчик для всех HTML файлов"""
+    file_path = frontend_path / f"{filename}.html"
+    if file_path.exists():
+        return FileResponse(str(file_path), media_type="text/html")
+    return HTMLResponse(f"<h1>{filename}.html не найден</h1>", status_code=404)
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     """Проверка здоровья сервера"""
-    return {
+    return JSONResponse({
         "status": "healthy",
         "version": "2.0.0",
         "message": "YouTube Analyzer работает",
         "services_loaded": services_loaded
-    }
+    })
 
 # API info
 @app.get("/api")
 async def api_info():
     """Информация об API"""
-    return {
+    return JSONResponse({
         "name": "YouTube Analyzer API",
         "version": "2.0.0",
         "endpoints": {
@@ -126,36 +130,7 @@ async def api_info():
         "docs": "/docs",
         "redoc": "/redoc",
         "services_loaded": services_loaded
-    }
-
-# Тестовая страница
-@app.get("/test.html")
-async def test_page():
-    """Тестовая страница для проверки API"""
-    test_path = frontend_path / "test.html"
-    if test_path.exists():
-        return FileResponse(str(test_path))
-    
-    # Если файла нет, возвращаем простую тестовую страницу
-    html_content = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>YouTube Analyzer - Test</title>
-    </head>
-    <body>
-        <h1>YouTube Analyzer API Test</h1>
-        <p>Services loaded: """ + str(services_loaded) + """</p>
-        <script>
-            console.log('Test page loaded');
-            fetch('/health').then(r => r.json()).then(data => {
-                document.body.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
-            });
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    })
 
 # Export endpoint
 @app.get("/api/data/export/download/{filename}")
@@ -177,23 +152,18 @@ async def not_found_handler(request: Request, exc):
     if request.url.path.startswith("/api/"):
         return JSONResponse(
             status_code=404,
-            content={"error": "API endpoint не найден", "path": request.url.path, "status": 404}
+            content={"error": "API endpoint не найден", "path": request.url.path}
         )
     
-    # Для не-API запросов возвращаем главную страницу (SPA routing)
+    # Для статических файлов
+    if request.url.path.endswith(('.js', '.css', '.png', '.jpg', '.ico')):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Файл не найден", "path": request.url.path}
+        )
+    
+    # Для остальных запросов возвращаем главную страницу
     return await root()
-
-@app.exception_handler(500)
-async def server_error_handler(request: Request, exc):
-    """Обработчик 500 ошибок"""
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": "Внутренняя ошибка сервера", 
-            "detail": str(exc),
-            "status": 500
-        }
-    )
 
 # Middleware для логирования
 @app.middleware("http")
@@ -211,51 +181,9 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-
-
-# Специальные обработчики для HTML файлов (кроме index.html)
-@app.get("/debug_routes.html")
-async def get_debug_routes():
-    """Debug routes страница"""
-    file_path = frontend_path / "debug_routes.html"
-    if file_path.exists():
-        return FileResponse(str(file_path), media_type="text/html")
-    return HTMLResponse("<h1>debug_routes.html не найден</h1>", status_code=404)
-
-@app.get("/standalone.html")
-async def get_standalone():
-    """Standalone страница"""
-    file_path = frontend_path / "standalone.html"
-    if file_path.exists():
-        return FileResponse(str(file_path), media_type="text/html")
-    return HTMLResponse("<h1>standalone.html не найден</h1>", status_code=404)
-
-@app.get("/simple_ui.html")
-async def get_simple_ui():
-    """Simple UI страница"""
-    file_path = frontend_path / "simple_ui.html"
-    if file_path.exists():
-        return FileResponse(str(file_path), media_type="text/html")
-    return HTMLResponse("<h1>simple_ui.html не найден</h1>", status_code=404)
-
-# Обработчик для всех HTML файлов
-@app.get("/{filename}.html")
-async def get_html_file(filename: str):
-    """Обработчик для всех HTML файлов"""
-    if filename == "index":
-        return await root()
-    
-    file_path = frontend_path / f"{filename}.html"
-    if file_path.exists() and file_path.suffix == '.html':
-        return FileResponse(str(file_path), media_type="text/html")
-    
-    # Возвращаем 404 для несуществующих файлов
-    return HTMLResponse(f"<h1>{filename}.html не найден</h1>", status_code=404)
-
-
-
-# Монтирование статических файлов - ВАЖНО: это должно быть в самом конце!
-app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="static")
+# Монтирование статических файлов - В САМОМ КОНЦЕ!
+# Это будет обрабатывать все остальные файлы (изображения и т.д.)
+app.mount("/", StaticFiles(directory=str(frontend_path), html=False), name="static")
 
 # Создание необходимых директорий при запуске
 def ensure_directories():
@@ -269,22 +197,21 @@ def main():
     """Запуск сервера"""
     ensure_directories()
     
-    print("🚀 Запуск YouTube Analyzer...")
+    print("🚀 Запуск YouTube Analyzer (Fixed)...")
     print(f"📁 Frontend путь: {frontend_path}")
     print(f"✅ Сервисы загружены: {services_loaded}")
     print("📡 Сервер будет доступен по адресу: http://localhost:8000")
     print("📚 API документация: http://localhost:8000/docs")
-    print("🧪 Тестовая страница: http://localhost:8000/test.html")
     print("❤️  Для остановки нажмите Ctrl+C")
     print("-" * 50)
     
     uvicorn.run(
-        "backend.main:app",
+        app,
         host="127.0.0.1",
         port=8000,
         reload=True,
         log_level="info",
-        access_log=False  # Отключаем access log, используем наш middleware
+        access_log=False
     )
 
 if __name__ == "__main__":
