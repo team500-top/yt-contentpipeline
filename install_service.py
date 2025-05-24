@@ -12,6 +12,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from security import safe_command
 
 class YouTubeAnalyzerService(win32serviceutil.ServiceFramework):
     _svc_name_ = 'YouTubeAnalyzer'
@@ -44,8 +45,7 @@ class YouTubeAnalyzerService(win32serviceutil.ServiceFramework):
         main_script = project_dir / "backend" / "main.py"
         
         # Запуск сервера
-        process = subprocess.Popen(
-            [str(venv_python), str(main_script)],
+        process = safe_command.run(subprocess.Popen, [str(venv_python), str(main_script)],
             cwd=str(project_dir),
             creationflags=subprocess.CREATE_NO_WINDOW
         )
