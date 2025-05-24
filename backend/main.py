@@ -26,6 +26,59 @@ from services import (
     config_router
 )
 
+
+# Добавьте эти строки в начало backend/main.py после импортов
+
+import mimetypes
+
+# Инициализация MIME типов
+mimetypes.init()
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('text/javascript', '.js')
+mimetypes.add_type('text/css', '.css')
+
+# Замените функции get_app_js и get_style_css на эти:
+
+@app.get("/app.js")
+async def get_app_js():
+    """JavaScript файл с правильным MIME типом"""
+    js_path = frontend_path / "app.js"
+    if js_path.exists():
+        return FileResponse(
+            path=str(js_path),
+            media_type="application/javascript",
+            headers={
+                "Content-Type": "application/javascript; charset=utf-8",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    return HTMLResponse("console.error('app.js not found');", media_type="application/javascript")
+
+@app.get("/style.css") 
+async def get_style_css():
+    """CSS файл с правильным MIME типом"""
+    css_path = frontend_path / "style.css"
+    if css_path.exists():
+        return FileResponse(
+            path=str(css_path),
+            media_type="text/css",
+            headers={
+                "Content-Type": "text/css; charset=utf-8",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    return HTMLResponse("/* style.css not found */", media_type="text/css")
+
+# Также добавьте монтирование статических файлов после роутеров:
+app.mount("/frontend", StaticFiles(directory=str(frontend_path)), name="frontend")
+app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="static")
+
+
+
 # Создание приложения
 app = FastAPI(
     title="YouTube Content Analyzer",
