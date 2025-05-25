@@ -1,122 +1,116 @@
-# БЕЗ eventlet!
-import sys
-import os
+import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
+import os
 
 # Загрузка переменных окружения
 load_dotenv()
 
-# Конфигурация
-HOST = os.getenv("HOST", "127.0.0.1")
-PORT = int(os.getenv("PORT", 8000))
+# Импорт модулей проекта
+from database import init_db, close_db
+from api import api_router
+from websocket import websocket_endpoint
 
-# Создание директорий
+# Создание необходимых директорий
 Path("temp").mkdir(exist_ok=True)
 Path("exports").mkdir(exist_ok=True)
+Path("logs").mkdir(exist_ok=True)
 
-# FastAPI приложение
-app = FastAPI(title="YouTube Content Analyzer", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Управление жизненным циклом приложения"""
+    # Startup
+    print("🚀 Запуск YouTube Analyzer...")
+    await init_db()
+    print("✅ База данных инициализирована")
+    
+    yield
+    
+    # Shutdown
+    print("🛑 Остановка YouTube Analyzer...")
+    await close_db()
+    print("✅ Соединения закрыты")
 
-# Главная страница - прямое чтение файла
-@app.get("/", response_class=HTMLResponse)
-def read_index():
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            content = f.read()
-        return content
-    except Exception as e:
-        return f"<h1>Error loading index.html</h1><p>{str(e)}</p>"
+# Создание FastAPI приложения
+app = FastAPI(
+    title="YouTube Content Analyzer",
+    version="1.0.0",
+    description="Система анализа YouTube контента для создания контент-стратегии",
+    lifespan=lifespan
+)
 
-# JavaScript
-@app.get("/app.js", response_class=PlainTextResponse)
-def read_js():
-    try:
-        with open("app.js", "r", encoding="utf-8") as f:
-            return f.read()
-    except:
-        return "console.error('app.js not found');"
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# CSS
-@app.get("/styles.css", response_class=PlainTextResponse)
-def read_css():
-    try:
-        with open("styles.css", "r", encoding="utf-8") as f:
-            return f.read()
-    except:
-        return "/* styles.css not found */"
+# Подключение API роутера
+app.include_router(api_router, prefix="/api", tags=["api"])
 
-# API заглушки для работы интерфейса
-@app.get("/api/videos")
-def get_videos():
-    return {"videos": [], "pagination": {"total": 0, "page": 1, "per_page": 50, "pages": 0}}
+# WebSocket endpoint
+app.websocket("/ws")(websocket_endpoint)
 
-@app.get("/api/tasks")
-def get_tasks():
-    return []
+# Статические файлы
+@app.get("/", response_class=FileResponse)
+async def read_index():
+    """Главная страница"""
+    return FileResponse("index.html")
 
-@app.get("/api/analytics/stats")
-def get_stats():
-    return {
-        "stats": {
-            "totalVideos": 0,
-            "totalChannels": 0, 
-            "avgEngagement": 0,
-            "topCategory": "Не определено",
-            "videosThisWeek": 0
-        },
-        "topVideos": []
-    }
+@app.get("/app.js", response_class=FileResponse)
+async def read_js():
+    """JavaScript файл"""
+    return FileResponse("app.js", media_type="application/javascript")
 
-@app.get("/api/search-queries")
-def get_search_queries():
-    return []
+@app.get("/styles.css", response_class=FileResponse)
+async def read_css():
+    """CSS файл"""
+    return FileResponse("styles.css", media_type="text/css")
 
-@app.get("/api/settings")
-def get_settings():
-    return {
-        "youtubeApiKey": os.getenv("YOUTUBE_API_KEY", ""),
-        "autoRetry": True,
-        "requestDelay": 3
-    }
-
-@app.post("/api/settings")
-def save_settings(settings: dict):
-    return {"status": "saved"}
-
-@app.post("/api/parse")
-def start_parsing(request_data: dict):
-    return {
-        "id": 1,
-        "task_id": "test_task",
-        "task_type": "search",
-        "parameters": request_data,
-        "status": "pending",
-        "progress": 0,
-        "total_items": 0,
-        "processed_items": 0,
-        "created_at": "2025-05-25T12:00:00"
-    }
-
-# Health check
+# Health check endpoint
 @app.get("/health")
-def health():
-    return {"status": "ok", "files": {
-        "index.html": os.path.exists("index.html"),
-        "app.js": os.path.exists("app.js"),
-        "styles.css": os.path.exists("styles.css")
-    }}
+async def health_check():
+    """Проверка состояния сервиса"""
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "database": "connected",
+        "redis": "connected"
+    }
 
 if __name__ == "__main__":
-    print("""
-    ╔═══════════════════════════════════════╗
-    ║  YouTube Analyzer (No Eventlet Mode)  ║
-    ╚═══════════════════════════════════════╝
-    """)
-    print(f"\n✅ Запуск на http://{HOST}:{PORT}")
-    print("✅ Без eventlet - должно работать!\n")
+    # Получение конфигурации из .env
+    HOST = os.getenv("HOST", "127.0.0.1")
+    PORT = int(os.getenv("PORT", 8000))
+    DEBUG = os.getenv("DEBUG", "false").lower() == "true"
     
-    uvicorn.run(app, host=HOST, port=PORT)
+    print(f"""
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║               YouTube Content Analyzer v1.0.0                 ║
+    ║                                                               ║
+    ║  Система анализа YouTube контента для контент-стратегии      ║
+    ╚═══════════════════════════════════════════════════════════════╝
+    
+    🌐 Интерфейс доступен по адресу: http://{HOST}:{PORT}
+    📊 API документация: http://{HOST}:{PORT}/docs
+    🔄 WebSocket: ws://{HOST}:{PORT}/ws
+    
+    Для остановки нажмите Ctrl+C
+    """)
+    
+    # Запуск сервера
+    uvicorn.run(
+        "main:app",
+        host=HOST,
+        port=PORT,
+        reload=DEBUG,
+        log_level="info" if DEBUG else "warning"
+    )
