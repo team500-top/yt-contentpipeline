@@ -108,6 +108,7 @@ createApp({
             notification: null,
             currentTime: '',
             recentQueries: [],
+            showExportMenu: false,
             
             // WebSocket
             ws: null,
@@ -151,8 +152,17 @@ createApp({
             return filtered;
         },
         
+        // Computed properties for tasks
         activeTasks() {
-            return this.tasks.filter(t => ['running', 'paused'].includes(t.status));
+            return this.tasks.filter(t => t.status === 'running');
+        },
+        
+        pausedTasks() {
+            return this.tasks.filter(t => t.status === 'paused');
+        },
+        
+        completedTasks() {
+            return this.tasks.filter(t => ['completed', 'failed', 'cancelled'].includes(t.status));
         }
     },
     
@@ -538,7 +548,7 @@ createApp({
         async clearCompletedTasks() {
             try {
                 await axios.delete('/api/tasks/completed');
-                this.tasks = this.tasks.filter(t => !['completed', 'failed'].includes(t.status));
+                this.tasks = this.tasks.filter(t => !['completed', 'failed', 'cancelled'].includes(t.status));
                 this.updateBadges();
                 this.showNotification({
                     type: 'success',
@@ -756,6 +766,13 @@ createApp({
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         },
         
+        getEngagementClass(rate) {
+            if (rate >= 10) return 'engagement-excellent';
+            if (rate >= 5) return 'engagement-good';
+            if (rate >= 2) return 'engagement-average';
+            return 'engagement-poor';
+        },
+        
         getTaskTypeName(type) {
             const types = {
                 'search': 'Поиск по ключевым словам',
@@ -772,7 +789,8 @@ createApp({
                 'running': 'Выполняется',
                 'paused': 'Приостановлено',
                 'completed': 'Завершено',
-                'failed': 'Ошибка'
+                'failed': 'Ошибка',
+                'cancelled': 'Отменено'
             };
             return statuses[status] || status;
         },
@@ -783,7 +801,8 @@ createApp({
                 'running': 'bg-blue-100 text-blue-800',
                 'paused': 'bg-yellow-100 text-yellow-800',
                 'completed': 'bg-green-100 text-green-800',
-                'failed': 'bg-red-100 text-red-800'
+                'failed': 'bg-red-100 text-red-800',
+                'cancelled': 'bg-gray-100 text-gray-800'
             };
             return classes[status] || 'bg-gray-100 text-gray-800';
         }

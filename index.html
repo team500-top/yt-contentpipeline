@@ -16,12 +16,63 @@
         .slide-enter-active, .slide-leave-active { transition: transform 0.3s; }
         .slide-enter-from { transform: translateX(100%); }
         .slide-leave-to { transform: translateX(-100%); }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Double scroll container */
+        .double-scroll-container {
+            position: relative;
+        }
+        
+        .scroll-wrapper-top {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            margin-bottom: -5px;
+        }
+        
+        .scroll-wrapper-top .scroll-content {
+            height: 1px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        
+        /* Engagement colors */
+        .engagement-excellent { color: #10b981; }
+        .engagement-good { color: #3b82f6; }
+        .engagement-average { color: #f59e0b; }
+        .engagement-poor { color: #ef4444; }
+        
+        /* Line clamp utilities */
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
     </style>
 </head>
 <body class="h-full bg-gray-50">
-    <div id="app" class="h-full">
+    <div id="app" class="h-full flex flex-col">
         <!-- Header -->
-        <header class="bg-white shadow-sm border-b border-gray-200">
+        <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center">
@@ -42,7 +93,7 @@
         </header>
 
         <!-- Navigation Tabs -->
-        <nav class="bg-white border-b border-gray-200">
+        <nav class="bg-white border-b border-gray-200 flex-shrink-0">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex space-x-8">
                     <button
@@ -90,38 +141,72 @@
                                         type="text"
                                         :placeholder="searchForm.type === 'keyword' ? 'Введите ключевые слова...' : 'URL канала или @username'"
                                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        @keyup.enter="startParsing"
                                     >
                                 </div>
                             </div>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Тип видео</label>
-                                    <select v-model="searchForm.videoType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-                                        <option value="all">Все</option>
-                                        <option value="shorts">Только Shorts</option>
-                                        <option value="long">Только длинные</option>
-                                    </select>
+                            <!-- Advanced Filters Accordion -->
+                            <details class="mt-6">
+                                <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                                    Расширенные фильтры ▼
+                                </summary>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Тип видео</label>
+                                        <select v-model="searchForm.videoType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <option value="all">Все</option>
+                                            <option value="shorts">Только Shorts</option>
+                                            <option value="long">Только длинные</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Сортировка</label>
+                                        <select v-model="searchForm.sort" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <option value="relevance">По релевантности</option>
+                                            <option value="date">По дате</option>
+                                            <option value="viewCount">По просмотрам</option>
+                                            <option value="rating">По рейтингу</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Количество</label>
+                                        <input
+                                            v-model.number="searchForm.maxResults"
+                                            type="number"
+                                            min="1"
+                                            max="500"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Длительность</label>
+                                        <select v-model="searchForm.duration" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <option value="">Любая</option>
+                                            <option value="short">Короткие (<4 мин)</option>
+                                            <option value="medium">Средние (4-20 мин)</option>
+                                            <option value="long">Длинные (>20 мин)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">После даты</label>
+                                        <input
+                                            v-model="searchForm.publishedAfter"
+                                            type="date"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Качество</label>
+                                        <select v-model="searchForm.videoDefinition" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <option value="">Любое</option>
+                                            <option value="hd">HD (720p+)</option>
+                                            <option value="sd">SD</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Сортировка</label>
-                                    <select v-model="searchForm.sort" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-                                        <option value="relevance">По релевантности</option>
-                                        <option value="date">По дате</option>
-                                        <option value="viewCount">По просмотрам</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Количество</label>
-                                    <input
-                                        v-model.number="searchForm.maxResults"
-                                        type="number"
-                                        min="1"
-                                        max="500"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                    >
-                                </div>
-                            </div>
+                            </details>
                             
                             <div class="mt-6 flex justify-end">
                                 <button
@@ -145,16 +230,19 @@
                         <div class="bg-white rounded-lg shadow p-6">
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Недавние запросы</h3>
                             <div class="space-y-3">
-                                <div v-for="query in recentQueries" :key="query.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                                <div v-for="query in recentQueries" :key="query.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
                                     <div>
                                         <p class="font-medium text-gray-900">{{ query.query }}</p>
-                                        <p class="text-sm text-gray-500">{{ query.type }} • {{ query.results }} результатов • {{ formatDate(query.date) }}</p>
+                                        <p class="text-sm text-gray-500">{{ query.type === 'keyword' ? 'Поиск' : 'Канал' }} • {{ query.results }} результатов • {{ formatDate(query.date) }}</p>
                                     </div>
                                     <button @click="repeatSearch(query)" class="text-red-600 hover:text-red-700">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                         </svg>
                                     </button>
+                                </div>
+                                <div v-if="recentQueries.length === 0" class="text-center py-8 text-gray-500">
+                                    Нет недавних запросов
                                 </div>
                             </div>
                         </div>
@@ -175,9 +263,25 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
                                     </svg>
                                 </button>
-                                <button @click="exportVideos" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
-                                    Экспорт
-                                </button>
+                                <div class="relative">
+                                    <button @click="showExportMenu = !showExportMenu" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center">
+                                        Экспорт
+                                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </button>
+                                    <div v-if="showExportMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                                        <button @click="exportVideos('excel'); showExportMenu = false" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            📊 Excel (.xlsx)
+                                        </button>
+                                        <button @click="exportVideos('csv'); showExportMenu = false" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            📄 CSV (.csv)
+                                        </button>
+                                        <button @click="exportVideos('json'); showExportMenu = false" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            🔧 JSON (.json)
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -206,98 +310,118 @@
                             </div>
                         </div>
 
-                        <!-- Videos Table View -->
-                        <div v-if="viewMode === 'table'" class="bg-white rounded-lg shadow overflow-x-auto">
-                            <table class="min-w-full">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Превью</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Название</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Канал</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Тип</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Просмотры</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Лайки</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Комментарии</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Вовлеченность</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Длительность</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Субтитры</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Главы</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="video in filteredVideos" :key="video.id" class="hover:bg-gray-50">
-                                        <td class="px-4 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
-                                            <img :src="video.thumbnail_url || 'https://via.placeholder.com/120x90?text=No+Image'" 
-                                                 :alt="video.title" 
-                                                 class="w-24 h-14 object-cover rounded cursor-pointer" 
-                                                 @error="$event.target.src='https://via.placeholder.com/120x90?text=No+Image'"
-                                                 @click="viewVideo(video)">
-                                        </td>
-                                        <td class="px-4 py-4">
-                                            <div class="text-sm font-medium text-gray-900 max-w-xs truncate" :title="video.title">
-                                                {{ video.title }}
-                                            </div>
-                                            <div class="text-xs text-gray-500 mt-1" v-if="video.top_5_keywords && video.top_5_keywords.length">
-                                                <span class="inline-block bg-gray-100 rounded px-2 py-0.5 mr-1 mb-1" v-for="keyword in video.top_5_keywords.slice(0,3)" :key="keyword">
-                                                    {{ keyword }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ video.channel_name || 'Unknown' }}
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap">
-                                            <span v-if="video.is_short" class="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">Short</span>
-                                            <span v-else class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">Обычное</span>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ formatNumber(video.views) }}
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ formatNumber(video.likes) }}
-                                            <span class="text-xs text-gray-500 block">{{ video.like_ratio ? video.like_ratio.toFixed(2) + '%' : '-' }}</span>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ formatNumber(video.comments) }}
-                                            <span class="text-xs text-gray-500 block">{{ video.comment_ratio ? video.comment_ratio.toFixed(2) + '%' : '-' }}</span>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap">
-                                            <div class="flex items-center">
-                                                <span class="text-sm font-medium" :class="getEngagementClass(video.engagement_rate)">
-                                                    {{ video.engagement_rate ? video.engagement_rate.toFixed(2) + '%' : '0%' }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ formatDate(video.publish_date) }}
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ formatDuration(video.duration) }}
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center">
-                                            <span v-if="video.has_cc" class="text-green-600">✓</span>
-                                            <span v-else class="text-red-600">✗</span>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center">
-                                            <span v-if="video.has_chapters" class="text-green-600">✓</span>
-                                            <span v-else class="text-gray-400">-</span>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm">
-                                            <button @click="viewVideo(video)" class="text-blue-600 hover:text-blue-900 mr-2">
-                                                Детали
-                                            </button>
-                                            <button @click="analyzeVideo(video)" class="text-green-600 hover:text-green-900 mr-2">
-                                                Анализ
-                                            </button>
-                                            <button v-if="!video.has_cc && !video.subtitles" @click="transcribeVideo(video)" class="text-purple-600 hover:text-purple-900">
-                                                Транскрибация
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <!-- Videos Table View with Double Scroll -->
+                        <div v-if="viewMode === 'table'" class="bg-white rounded-lg shadow overflow-hidden">
+                            <div class="double-scroll-container">
+                                <!-- Top scroll bar -->
+                                <div class="scroll-wrapper-top" ref="topScroll" @scroll="syncScroll('top', $event)">
+                                    <div class="scroll-content" :style="{width: tableWidth + 'px'}"></div>
+                                </div>
+                                
+                                <!-- Table container -->
+                                <div class="table-wrapper" ref="tableContainer" @scroll="syncScroll('bottom', $event)">
+                                    <table class="min-w-full" :style="{width: tableWidth + 'px'}">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Превью</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Название</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Канал</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Тип</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Просмотры</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Лайки</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Комментарии</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Вовлеченность</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Длительность</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Субтитры</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Главы</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ссылки</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Эмодзи</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Качество</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr v-for="video in filteredVideos" :key="video.id" class="hover:bg-gray-50">
+                                                <td class="px-4 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
+                                                    <img :src="video.thumbnail_url || 'https://via.placeholder.com/120x90?text=No+Image'" 
+                                                         :alt="video.title" 
+                                                         class="w-24 h-14 object-cover rounded cursor-pointer" 
+                                                         @error="$event.target.src='https://via.placeholder.com/120x90?text=No+Image'"
+                                                         @click="viewVideo(video)">
+                                                </td>
+                                                <td class="px-4 py-4">
+                                                    <div class="text-sm font-medium text-gray-900 max-w-xs" :title="video.title">
+                                                        {{ video.title }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500 mt-1" v-if="video.top_5_keywords && video.top_5_keywords.length">
+                                                        <span class="inline-block bg-gray-100 rounded px-2 py-0.5 mr-1 mb-1" v-for="keyword in video.top_5_keywords.slice(0,3)" :key="keyword">
+                                                            {{ keyword }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {{ video.channel_name || 'Unknown' }}
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap">
+                                                    <span v-if="video.is_short" class="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">Short</span>
+                                                    <span v-else class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">Обычное</span>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {{ formatNumber(video.views) }}
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {{ formatNumber(video.likes) }}
+                                                    <span class="text-xs text-gray-500 block">{{ video.like_ratio ? video.like_ratio.toFixed(2) + '%' : '-' }}</span>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {{ formatNumber(video.comments) }}
+                                                    <span class="text-xs text-gray-500 block">{{ video.comment_ratio ? video.comment_ratio.toFixed(2) + '%' : '-' }}</span>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap">
+                                                    <div class="flex items-center">
+                                                        <span class="text-sm font-medium" :class="getEngagementClass(video.engagement_rate)">
+                                                            {{ video.engagement_rate ? video.engagement_rate.toFixed(2) + '%' : '0%' }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {{ formatDate(video.publish_date) }}
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {{ formatDuration(video.duration) }}
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                                    <span v-if="video.has_cc" class="text-green-600">✓</span>
+                                                    <span v-else class="text-red-600">✗</span>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                                    <span v-if="video.has_chapters" class="text-green-600">✓</span>
+                                                    <span v-else class="text-gray-400">-</span>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                                                    {{ video.links_in_description || 0 }}
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-center">
+                                                    <span v-if="video.emoji_in_title" class="text-green-600">✓</span>
+                                                    <span v-else class="text-gray-400">-</span>
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {{ video.video_quality || 'HD' }}
+                                                </td>
+                                                <td class="px-4 py-4 whitespace-nowrap text-sm">
+                                                    <button @click="viewVideo(video)" class="text-blue-600 hover:text-blue-900 mr-2">
+                                                        Детали
+                                                    </button>
+                                                    <button @click="analyzeVideo(video)" class="text-green-600 hover:text-green-900">
+                                                        Анализ
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                             
                             <!-- Пустое состояние -->
                             <div v-if="filteredVideos.length === 0" class="text-center py-12">
@@ -313,7 +437,10 @@
                         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div v-for="video in filteredVideos" :key="video.id" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer" @click="viewVideo(video)">
                                 <div class="relative">
-                                    <img :src="video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail'" :alt="video.title" class="w-full h-48 object-cover rounded-t-lg" @error="$event.target.src='https://via.placeholder.com/320x180?text=No+Thumbnail'">
+                                    <img :src="video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail'" 
+                                         :alt="video.title" 
+                                         class="w-full h-48 object-cover rounded-t-lg" 
+                                         @error="$event.target.src='https://via.placeholder.com/320x180?text=No+Thumbnail'">
                                     <span v-if="video.is_short" class="absolute top-2 right-2 px-2 py-1 text-xs bg-purple-600 text-white rounded">Short</span>
                                     <span v-if="video.duration" class="absolute bottom-2 right-2 px-2 py-1 text-xs bg-black bg-opacity-75 text-white rounded">{{ formatDuration(video.duration) }}</span>
                                 </div>
@@ -326,7 +453,7 @@
                                     </div>
                                     <div class="mt-3 pt-3 border-t border-gray-200">
                                         <div class="flex justify-between items-center">
-                                            <span class="text-sm font-medium text-gray-900">Вовлеченность: {{ video.engagement_rate }}%</span>
+                                            <span class="text-sm font-medium text-gray-900">Вовлеченность: {{ video.engagement_rate.toFixed(2) }}%</span>
                                             <div class="flex space-x-2">
                                                 <span class="text-xs text-gray-500">👍 {{ formatNumber(video.likes) }}</span>
                                                 <span class="text-xs text-gray-500">💬 {{ formatNumber(video.comments) }}</span>
@@ -346,14 +473,14 @@
                         <div class="bg-white rounded-lg shadow p-4 mb-6">
                             <div class="flex justify-between items-center">
                                 <div class="flex space-x-4">
-                                    <button @click="pauseAllTasks" class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
+                                    <button @click="pauseAllTasks" :disabled="activeTasks.length === 0" class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed">
                                         Приостановить все
                                     </button>
-                                    <button @click="resumeAllTasks" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                                    <button @click="resumeAllTasks" :disabled="pausedTasks.length === 0" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
                                         Возобновить все
                                     </button>
                                 </div>
-                                <button @click="clearCompletedTasks" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                                <button @click="clearCompletedTasks" :disabled="completedTasks.length === 0" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
                                     Очистить завершенные
                                 </button>
                             </div>
@@ -365,7 +492,7 @@
                                 <div class="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 class="font-medium text-gray-900">{{ getTaskTypeName(task.task_type) }}</h3>
-                                        <p class="text-sm text-gray-500">{{ task.parameters.query || task.parameters.channel }}</p>
+                                        <p class="text-sm text-gray-500">{{ task.parameters.query || task.parameters.channel || 'Нет данных' }}</p>
                                     </div>
                                     <span :class="['px-3 py-1 text-xs font-medium rounded-full', getTaskStatusClass(task.status)]">
                                         {{ getTaskStatusName(task.status) }}
@@ -375,18 +502,25 @@
                                 <!-- Progress Bar -->
                                 <div class="mb-4">
                                     <div class="flex justify-between text-sm text-gray-600 mb-1">
-                                        <span>Прогресс: {{ task.processed_items }} / {{ task.total_items }}</span>
-                                        <span>{{ task.progress.toFixed(0) }}%</span>
+                                        <span>Прогресс: {{ task.processed_items || 0 }} / {{ task.total_items || 0 }}</span>
+                                        <span>{{ (task.progress || 0).toFixed(0) }}%</span>
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div :style="{width: task.progress + '%'}" class="bg-red-600 h-2 rounded-full transition-all duration-300"></div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                        <div :style="{width: (task.progress || 0) + '%'}" class="bg-red-600 h-2 rounded-full transition-all duration-300 relative">
+                                            <div v-if="task.status === 'running'" class="absolute inset-0 bg-white opacity-25 animate-pulse"></div>
+                                        </div>
                                     </div>
                                     
                                     <!-- Детали задачи -->
                                     <div v-if="task.status === 'running' && task.parameters" class="mt-2 text-xs text-gray-500">
-                                        <p>Запрос: {{ task.parameters.query }}</p>
-                                        <p>Тип: {{ task.parameters.type === 'keyword' ? 'Поиск' : 'Канал' }}</p>
-                                        <p>Максимум: {{ task.parameters.maxResults }} видео</p>
+                                        <p v-if="task.parameters.query">Запрос: {{ task.parameters.query }}</p>
+                                        <p v-if="task.parameters.type">Тип: {{ task.parameters.type === 'keyword' ? 'Поиск' : 'Канал' }}</p>
+                                        <p v-if="task.parameters.maxResults">Максимум: {{ task.parameters.maxResults }} видео</p>
+                                    </div>
+                                    
+                                    <!-- Сообщение об ошибке -->
+                                    <div v-if="task.error_message" class="mt-2 text-sm text-red-600">
+                                        Ошибка: {{ task.error_message }}
                                     </div>
                                 </div>
                                 
@@ -402,7 +536,7 @@
                                         <button v-else-if="task.status === 'paused'" @click="resumeTask(task.id)" class="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
                                             Продолжить
                                         </button>
-                                        <button @click="cancelTask(task.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                        <button v-if="['running', 'paused', 'pending'].includes(task.status)" @click="cancelTask(task.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
                                             Отменить
                                         </button>
                                     </div>
@@ -449,11 +583,11 @@
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Тренды просмотров</h3>
-                                <canvas id="viewsChart"></canvas>
+                                <canvas id="viewsChart" style="max-height: 300px;"></canvas>
                             </div>
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Распределение по типам</h3>
-                                <canvas id="typeChart"></canvas>
+                                <canvas id="typeChart" style="max-height: 300px;"></canvas>
                             </div>
                         </div>
 
@@ -462,9 +596,12 @@
                             <div class="p-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Топ видео по вовлеченности</h3>
                                 <div class="space-y-4">
-                                    <div v-for="(video, index) in topVideos" :key="video.id" class="flex items-center justify-between">
+                                    <div v-for="(video, index) in topVideos" :key="video.id" class="flex items-center justify-between p-3 hover:bg-gray-50 rounded cursor-pointer" @click="viewVideo(video)">
                                         <div class="flex items-center">
-                                            <span class="text-2xl font-bold text-gray-400 mr-4">{{ index + 1 }}</span>
+                                            <span class="text-2xl font-bold text-gray-400 mr-4 w-8">{{ index + 1 }}</span>
+                                            <img :src="video.thumbnail_url || 'https://via.placeholder.com/80x45'" 
+                                                 class="w-20 h-12 object-cover rounded mr-4"
+                                                 @error="$event.target.src='https://via.placeholder.com/80x45'">
                                             <div>
                                                 <p class="font-medium text-gray-900">{{ video.title }}</p>
                                                 <p class="text-sm text-gray-500">{{ video.channel_name }} • {{ formatNumber(video.views) }} просмотров</p>
@@ -487,13 +624,38 @@
                         <div class="space-y-6">
                             <!-- API Settings -->
                             <div class="bg-white rounded-lg shadow p-6">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">API ключи</h3>
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">API настройки</h3>
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">YouTube API Key</label>
                                         <input
                                             v-model="settings.youtubeApiKey"
                                             type="password"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            placeholder="AIzaSy..."
+                                        >
+                                        <p class="mt-1 text-xs text-gray-500">Ваш ключ API для доступа к YouTube Data API v3</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Server Settings -->
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Настройки сервера</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Host</label>
+                                        <input
+                                            v-model="settings.host"
+                                            type="text"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                                        <input
+                                            v-model.number="settings.port"
+                                            type="number"
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                                         >
                                     </div>
@@ -506,36 +668,75 @@
                                 <div class="space-y-4">
                                     <div class="flex items-center justify-between">
                                         <div>
-                                            <p class="font-medium text-gray-900">Автоматический повтор при ошибке</p>
-                                            <p class="text-sm text-gray-500">Повторять неудачные запросы автоматически</p>
+                                            <p class="font-medium text-gray-900">Глубокий анализ</p>
+                                            <p class="text-sm text-gray-500">Включить AI-анализ контента</p>
                                         </div>
-                                        <button @click="settings.autoRetry = !settings.autoRetry" :class="['relative inline-flex h-6 w-11 items-center rounded-full', settings.autoRetry ? 'bg-red-600' : 'bg-gray-200']">
-                                            <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', settings.autoRetry ? 'translate-x-6' : 'translate-x-1']"></span>
+                                        <button 
+                                            @click="settings.enableDeepAnalysis = !settings.enableDeepAnalysis" 
+                                            :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors', settings.enableDeepAnalysis ? 'bg-red-600' : 'bg-gray-200']"
+                                        >
+                                            <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform', settings.enableDeepAnalysis ? 'translate-x-6' : 'translate-x-1']"></span>
                                         </button>
                                     </div>
+                                    
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-medium text-gray-900">Автоповтор при ошибке</p>
+                                            <p class="text-sm text-gray-500">Повторять неудачные запросы</p>
+                                        </div>
+                                        <button 
+                                            @click="settings.enableAutoRetry = !settings.enableAutoRetry" 
+                                            :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors', settings.enableAutoRetry ? 'bg-red-600' : 'bg-gray-200']"
+                                        >
+                                            <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform', settings.enableAutoRetry ? 'translate-x-6' : 'translate-x-1']"></span>
+                                        </button>
+                                    </div>
+                                    
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Задержка между запросами (сек)</label>
                                         <input
-                                            v-model.number="settings.requestDelay"
+                                            v-model.number="settings.apiRequestDelay"
                                             type="number"
                                             min="1"
                                             max="60"
                                             class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                                         >
                                     </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Макс. результатов на поиск</label>
+                                        <input
+                                            v-model.number="settings.maxResultsPerSearch"
+                                            type="number"
+                                            min="1"
+                                            max="1000"
+                                            class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        >
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Export/Import -->
+                            <!-- Database Settings -->
                             <div class="bg-white rounded-lg shadow p-6">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">Экспорт и импорт данных</h3>
-                                <div class="flex space-x-4">
-                                    <button @click="exportDatabase" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
-                                        Экспорт базы данных
-                                    </button>
-                                    <button @click="importDatabase" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
-                                        Импорт базы данных
-                                    </button>
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">База данных</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Путь к БД</label>
+                                        <input
+                                            v-model="settings.databasePath"
+                                            type="text"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                                            readonly
+                                        >
+                                    </div>
+                                    <div class="flex space-x-4">
+                                        <button @click="exportDatabase" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                                            Экспорт базы данных
+                                        </button>
+                                        <button @click="importDatabase" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                                            Импорт базы данных
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -544,6 +745,52 @@
                                 <button @click="saveSettings" class="px-6 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700">
                                     Сохранить настройки
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Справка Tab -->
+                    <div v-else-if="activeTab === 'help'" key="help">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">📖 Справка</h2>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <p class="text-gray-600 mb-4">
+                                YouTube Content Analyzer - система для анализа YouTube контента и создания эффективной контент-стратегии.
+                            </p>
+                            
+                            <div class="text-center">
+                                <a href="/help.html" target="_blank" class="inline-flex items-center px-6 py-3 bg-red-600 text-white font-medium rounded-md hover:bg-red-700">
+                                    Открыть полную справку
+                                    <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            
+                            <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3">🚀 Быстрый старт</h3>
+                                    <ol class="space-y-2 text-sm text-gray-600">
+                                        <li>1. Перейдите на вкладку "Парсинг"</li>
+                                        <li>2. Введите ключевые слова или URL канала</li>
+                                        <li>3. Настройте фильтры (опционально)</li>
+                                        <li>4. Нажмите "Начать парсинг"</li>
+                                        <li>5. Отслеживайте прогресс во вкладке "Задачи"</li>
+                                        <li>6. Анализируйте результаты во вкладке "Видео"</li>
+                                    </ol>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-3">📊 Основные функции</h3>
+                                    <ul class="space-y-2 text-sm text-gray-600">
+                                        <li>• Парсинг по ключевым словам и каналам</li>
+                                        <li>• Анализ 42+ параметров для каждого видео</li>
+                                        <li>• AI-рекомендации по улучшению контента</li>
+                                        <li>• Экспорт данных в Excel, CSV, JSON</li>
+                                        <li>• Real-time мониторинг задач</li>
+                                        <li>• Аналитика и визуализация данных</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -567,11 +814,14 @@
                         
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div>
-                                <img :src="selectedVideo.thumbnail_url" :alt="selectedVideo.title" class="w-full rounded-lg mb-4">
+                                <img :src="selectedVideo.thumbnail_url" 
+                                     :alt="selectedVideo.title" 
+                                     class="w-full rounded-lg mb-4"
+                                     @error="$event.target.src='https://via.placeholder.com/640x360?text=No+Thumbnail'">
                                 <div class="space-y-3">
                                     <div>
                                         <h3 class="font-medium text-gray-900">Описание</h3>
-                                        <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ selectedVideo.description }}</p>
+                                        <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ selectedVideo.description || 'Нет описания' }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -599,7 +849,7 @@
                                     </div>
                                 </div>
                                 
-                                <div v-if="selectedVideo.top_5_keywords" class="bg-gray-50 rounded-lg p-4">
+                                <div v-if="selectedVideo.top_5_keywords && selectedVideo.top_5_keywords.length" class="bg-gray-50 rounded-lg p-4">
                                     <h3 class="font-medium text-gray-900 mb-3">Топ ключевые слова</h3>
                                     <div class="flex flex-wrap gap-2">
                                         <span v-for="keyword in selectedVideo.top_5_keywords" :key="keyword" class="px-3 py-1 bg-white text-sm text-gray-700 rounded-full border border-gray-200">
@@ -610,12 +860,12 @@
                                 
                                 <div v-if="selectedVideo.improvement_recommendations" class="bg-blue-50 rounded-lg p-4">
                                     <h3 class="font-medium text-gray-900 mb-2">Рекомендации по улучшению</h3>
-                                    <p class="text-sm text-gray-700">{{ selectedVideo.improvement_recommendations }}</p>
+                                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedVideo.improvement_recommendations }}</p>
                                 </div>
                                 
                                 <div v-if="selectedVideo.success_analysis" class="bg-green-50 rounded-lg p-4">
                                     <h3 class="font-medium text-gray-900 mb-2">Анализ успеха</h3>
-                                    <p class="text-sm text-gray-700">{{ selectedVideo.success_analysis }}</p>
+                                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedVideo.success_analysis }}</p>
                                 </div>
                                 
                                 <div class="flex space-x-3">
