@@ -21,7 +21,7 @@ class YouTubeClient:
         self.youtube = build("youtube", "v3", developerKey=self.api_key)
         self.executor = ThreadPoolExecutor(max_workers=4)
         
-        # Настройки yt-dlp
+        # Настройки yt-dlp для субтитров
         self.ydl_opts = {
             'quiet': True,
             'no_warnings': True,
@@ -29,8 +29,10 @@ class YouTubeClient:
             'skip_download': True,
             'writesubtitles': True,
             'writeautomaticsub': True,
-            'subtitleslangs': ['ru', 'en'],
-            'subtitlesformat': 'vtt',
+            'subtitleslangs': ['ru', 'en', 'auto'],
+            'subtitlesformat': 'vtt/srt/best',
+            'getcomments': False,
+            'format': 'best'
         }
     
     def extract_video_id(self, url: str) -> Optional[str]:
@@ -111,9 +113,10 @@ class YouTubeClient:
         max_results: int = 50,
         video_type: str = "all",
         order: str = "relevance",
-        published_after: Optional[datetime] = None
+        published_after: Optional[datetime] = None,
+        **kwargs
     ) -> List[Dict[str, Any]]:
-        """Поиск видео по ключевым словам"""
+        """Поиск видео по ключевым словам с расширенными фильтрами"""
         videos = []
         next_page_token = None
         
@@ -123,6 +126,8 @@ class YouTubeClient:
             video_duration = "short"  # < 4 минут
         elif video_type == "long":
             video_duration = "long"   # > 20 минут
+        elif kwargs.get('duration'):
+            video_duration = kwargs['duration']
         
         while len(videos) < max_results:
             try:
@@ -132,7 +137,9 @@ class YouTubeClient:
                     "type": "video",
                     "maxResults": min(50, max_results - len(videos)),
                     "order": order,
-                    "pageToken": next_page_token
+                    "pageToken": next_page_token,
+                    "regionCode": kwargs.get('regionCode', 'RU'),
+                    "relevanceLanguage": kwargs.get('relevanceLanguage', 'ru')
                 }
                 
                 if video_duration:
@@ -140,6 +147,16 @@ class YouTubeClient:
                 
                 if published_after:
                     request_params["publishedAfter"] = published_after.isoformat() + "Z"
+                
+                # Дополнительные фильтры
+                if kwargs.get('videoDefinition'):
+                    request_params["videoDefinition"] = kwargs['videoDefinition']
+                
+                if kwargs.get('videoDimension'):
+                    request_params["videoDimension"] = kwargs['videoDimension']
+                
+                if kwargs.get('videoCaption'):
+                    request_params["videoCaption"] = kwargs['videoCaption']
                 
                 response = self.youtube.search().list(**request_params).execute()
                 
@@ -242,7 +259,7 @@ class YouTubeClient:
         try:
             # Получение основной информации через API
             video_response = self.youtube.videos().list(
-                part="snippet,statistics,contentDetails,status",
+                part="snippet,statistics,contentDetails,status,recordingDetails,topicDetails",
                 id=video_id
             ).execute()
             
@@ -282,6 +299,19 @@ class YouTubeClient:
                 "is_live": video_info["snippet"].get("liveBroadcastContent") == "live"
             }
             
+            # Проверка на эмодзи в заголовке
+            emoji_pattern = re.compile(
+                "["
+                "\U0001F600-\U0001F64F"  # emoticons
+                "\U0001F300-\U0001F5FF"  # symbols & pictographs
+                "\U0001F680-\U0001F6FF"  # transport & map symbols
+                "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                "\U00002702-\U000027B0"
+                "\U000024C2-\U0001F251"
+                "]+", flags=re.UNICODE)
+            
+            details["emoji_in_title"] = bool(emoji_pattern.search(details["title"]))
+            
             # Вычисление метрик вовлеченности
             if details["views"] > 0:
                 details["like_ratio"] = (details["likes"] / details["views"]) * 100
@@ -307,11 +337,27 @@ class YouTubeClient:
             raise
     
     async def _get_ydl_data(self, video_id: str) -> Dict[str, Any]:
-        """Получение дополнительных данных через yt-dlp"""
+        """Получение дополнительных данных через yt-dlp с улучшенной поддержкой субтитров"""
         loop = asyncio.get_event_loop()
         
         def extract_info():
-            with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
+            # Расширенные настройки для субтитров
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': False,
+                'skip_download': True,
+                'writesubtitles': True,
+                'writeautomaticsub': True,
+                'allsubtitles': True,  # Получить все доступные субтитры
+                'subtitleslangs': ['all'],  # Все языки
+                'subtitlesformat': 'vtt/srt/best',
+                'getcomments': False,
+                'format': 'best',
+                'ignoreerrors': True
+            }
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 try:
                     info = ydl.extract_info(
                         f"https://youtube.com/watch?v={video_id}",
@@ -330,19 +376,97 @@ class YouTubeClient:
         # Извлечение дополнительных данных
         ydl_data = {}
         
-        # Субтитры
-        if info.get("subtitles") or info.get("automatic_captions"):
-            ydl_data["has_subtitles"] = True
-            # Здесь можно добавить код для загрузки и обработки субтитров
+        # Субтитры - улучшенная проверка
+        has_subtitles = False
+        subtitle_text = ""
+        subtitle_languages = []
+        
+        # Проверка автоматических субтитров
+        if info.get("automatic_captions"):
+            has_subtitles = True
+            ydl_data["has_automatic_captions"] = True
+            auto_langs = list(info["automatic_captions"].keys())
+            subtitle_languages.extend(auto_langs)
+            
+            # Попытка получить текст субтитров
+            for lang in ['ru', 'en']:
+                if lang in info["automatic_captions"]:
+                    # Здесь можно добавить код для загрузки текста субтитров
+                    ydl_data["subtitle_language"] = lang
+                    break
+        
+        # Проверка обычных субтитров
+        if info.get("subtitles"):
+            has_subtitles = True
+            ydl_data["has_manual_subtitles"] = True
+            manual_langs = list(info["subtitles"].keys())
+            subtitle_languages.extend(manual_langs)
+        
+        ydl_data["has_subtitles"] = has_subtitles
+        ydl_data["has_cc"] = has_subtitles  # Для совместимости
+        ydl_data["subtitle_languages"] = list(set(subtitle_languages))
         
         # Главы видео
         if info.get("chapters"):
             ydl_data["has_chapters"] = True
             ydl_data["chapters_count"] = len(info["chapters"])
+            ydl_data["chapter_titles"] = [ch.get("title", "") for ch in info["chapters"]]
+        else:
+            ydl_data["has_chapters"] = False
         
-        # Информация о спонсорских сегментах (если доступно)
+        # Теги
+        if info.get("tags"):
+            ydl_data["tags"] = info["tags"][:20]  # Первые 20 тегов
+        
+        # Описание канала
+        if info.get("channel_description"):
+            ydl_data["channel_description"] = info["channel_description"][:1000]
+        
+        # Возрастные ограничения
+        if info.get("age_limit"):
+            ydl_data["age_restricted"] = info["age_limit"] > 0
+        
+        # Категория
+        if info.get("categories"):
+            ydl_data["categories"] = info["categories"]
+        
+        # Является ли видео прямой трансляцией
+        ydl_data["is_live"] = info.get("is_live", False)
+        
+        # Количество просмотров в прямом эфире
+        if info.get("concurrent_view_count"):
+            ydl_data["live_viewers"] = info["concurrent_view_count"]
+        
+        # Проверка на наличие спонсорских блоков
         if info.get("sponsorblock_chapters"):
             ydl_data["has_sponsorblock"] = True
+            ydl_data["sponsorblock_count"] = len(info["sponsorblock_chapters"])
+        
+        # Информация о качестве видео
+        formats = info.get("formats", [])
+        if formats:
+            # Найти максимальное качество
+            max_height = 0
+            for fmt in formats:
+                if fmt.get("height"):
+                    max_height = max(max_height, fmt["height"])
+            
+            if max_height >= 2160:
+                ydl_data["max_quality"] = "4K"
+            elif max_height >= 1440:
+                ydl_data["max_quality"] = "2K"
+            elif max_height >= 1080:
+                ydl_data["max_quality"] = "1080p"
+            elif max_height >= 720:
+                ydl_data["max_quality"] = "720p"
+            else:
+                ydl_data["max_quality"] = "SD"
+        
+        # Проверка на наличие HDR
+        for fmt in formats:
+            if fmt.get("dynamic_range") == "HDR":
+                ydl_data["has_hdr"] = True
+                break
         
         return ydl_data
     
@@ -350,7 +474,7 @@ class YouTubeClient:
         """Получение информации о канале"""
         try:
             response = self.youtube.channels().list(
-                part="snippet,statistics,contentDetails",
+                part="snippet,statistics,contentDetails,brandingSettings",
                 id=channel_id
             ).execute()
             
@@ -359,23 +483,63 @@ class YouTubeClient:
             
             channel = response["items"][0]
             
+            # Извлечение контактов из описания канала
+            description = channel["snippet"].get("description", "")
+            contacts = self._extract_contacts(description)
+            
             return {
                 "channel_id": channel_id,
                 "channel_url": f"https://youtube.com/channel/{channel_id}",
                 "title": channel["snippet"]["title"],
-                "description": channel["snippet"]["description"],
+                "description": description,
                 "subscriber_count": int(channel["statistics"].get("subscriberCount", 0)),
                 "video_count": int(channel["statistics"].get("videoCount", 0)),
                 "view_count": int(channel["statistics"].get("viewCount", 0)),
                 "created_date": channel["snippet"]["publishedAt"],
                 "country": channel["snippet"].get("country"),
                 "thumbnail_url": channel["snippet"]["thumbnails"]["high"]["url"],
-                "uploads_playlist_id": channel["contentDetails"]["relatedPlaylists"]["uploads"]
+                "uploads_playlist_id": channel["contentDetails"]["relatedPlaylists"]["uploads"],
+                "custom_url": channel["snippet"].get("customUrl"),
+                "keywords": channel["brandingSettings"]["channel"].get("keywords", "").split() if "brandingSettings" in channel else [],
+                "contacts": contacts
             }
             
         except HttpError as e:
             print(f"YouTube API error: {e}")
             raise
+    
+    def _extract_contacts(self, text: str) -> Dict[str, List[str]]:
+        """Извлечение контактной информации из текста"""
+        contacts = {
+            "emails": [],
+            "phones": [],
+            "social_media": {}
+        }
+        
+        # Email
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        contacts["emails"] = re.findall(email_pattern, text)
+        
+        # Телефоны
+        phone_pattern = r'[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[(]?[0-9]{1,3}[)]?[-\s\.]?[0-9]{3,5}[-\s\.]?[0-9]{3,5}'
+        contacts["phones"] = re.findall(phone_pattern, text)
+        
+        # Социальные сети
+        social_patterns = {
+            'instagram': r'instagram\.com/[\w.]+',
+            'telegram': r't\.me/[\w]+|telegram\.me/[\w]+',
+            'twitter': r'twitter\.com/[\w]+',
+            'facebook': r'facebook\.com/[\w.]+',
+            'tiktok': r'tiktok\.com/@[\w.]+',
+            'vk': r'vk\.com/[\w]+'
+        }
+        
+        for platform, pattern in social_patterns.items():
+            matches = re.findall(pattern, text.lower())
+            if matches:
+                contacts["social_media"][platform] = matches
+        
+        return contacts
     
     def get_video_category_name(self, category_id: str) -> str:
         """Получение названия категории видео"""

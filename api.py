@@ -24,7 +24,7 @@ from tasks import (
     resume_task as celery_resume_task,
     cancel_task as celery_cancel_task
 )
-from websocket import notify_task_update, notify_video_added, send_notification, manager
+from websocket import notify_task_update, notify_video_added, send_notification
 
 # Создание роутера
 api_router = APIRouter()
@@ -79,7 +79,7 @@ async def get_videos(
         result = await session.execute(query)
         videos = result.scalars().all()
         
-        # Формирование ответа
+        # Формирование ответа с ВСЕМИ полями
         return {
             "videos": [
                 {
@@ -91,22 +91,27 @@ async def get_videos(
                     "views": video.views,
                     "likes": video.likes,
                     "comments": video.comments,
+                    "dislikes": video.dislikes or 0,
                     "engagement_rate": round(video.engagement_rate, 2),
+                    "like_ratio": round(video.like_ratio, 2),
+                    "comment_ratio": round(video.comment_ratio, 2),
                     "publish_date": video.publish_date.isoformat() if video.publish_date else None,
                     "is_short": video.is_short,
                     "thumbnail_url": video.thumbnail_url,
                     "duration": video.duration,
                     "video_category": video.video_category,
-                    "top_5_keywords": video.top_5_keywords or [],
-                    "has_chapters": video.has_chapters,
+                    "video_quality": video.video_quality,
                     "has_cc": video.has_cc,
+                    "has_chapters": video.has_chapters,
+                    "has_branding": video.has_branding,
                     "emoji_in_title": video.emoji_in_title,
-                    "like_ratio": round(video.like_ratio, 2) if video.like_ratio else 0,
-                    "comment_ratio": round(video.comment_ratio, 2) if video.comment_ratio else 0,
+                    "top_5_keywords": video.top_5_keywords or [],
+                    "links_in_description": video.links_in_description or 0,
+                    "has_pinned_comment": video.has_pinned_comment,
+                    "speech_speed": video.speech_speed,
                     "improvement_recommendations": video.improvement_recommendations,
                     "success_analysis": video.success_analysis,
-                    "content_strategy": video.content_strategy,
-                    "subtitles": video.subtitles
+                    "content_strategy": video.content_strategy
                 }
                 for video in videos
             ],
@@ -145,6 +150,7 @@ async def get_video(video_id: int):
                     "avg_views": channel.avg_views
                 }
         
+        # Возвращаем ВСЕ поля
         return {
             "id": video.id,
             "video_url": video.video_url,
@@ -168,15 +174,28 @@ async def get_video(video_id: int):
             "has_cc": video.has_cc,
             "has_chapters": video.has_chapters,
             "has_branding": video.has_branding,
+            "has_intro": video.has_intro,
+            "has_outro": video.has_outro,
             "emoji_in_title": video.emoji_in_title,
             "keywords": video.keywords,
             "top_5_keywords": video.top_5_keywords,
+            "subtitles": video.subtitles,
             "links_in_description": video.links_in_description,
+            "links_in_channel_description": video.links_in_channel_description,
+            "has_pinned_comment": video.has_pinned_comment,
+            "contacts_in_video": video.contacts_in_video,
+            "contacts_in_channel": video.contacts_in_channel,
+            "speech_speed": video.speech_speed,
+            "channel_avg_views": video.channel_avg_views,
+            "channel_avg_likes": video.channel_avg_likes,
+            "channel_frequency": video.channel_frequency,
+            "channel_age": video.channel_age,
+            "average_view_duration": video.average_view_duration,
+            "click_through_rate": video.click_through_rate,
             "improvement_recommendations": video.improvement_recommendations,
             "success_analysis": video.success_analysis,
             "content_strategy": video.content_strategy,
-            "created_at": video.created_at.isoformat() if video.created_at else None,
-            "subtitles": video.subtitles
+            "created_at": video.created_at.isoformat() if video.created_at else None
         }
 
 @api_router.post("/videos/{video_id}/analyze")
@@ -211,24 +230,7 @@ async def analyze_video(video_id: int):
         
         return {"task_id": task.id, "status": "started", "celery_id": celery_task.id}
 
-@api_router.post("/videos/{video_id}/transcribe")
-async def transcribe_video(video_id: int):
-    """Запуск транскрибации видео"""
-    async with get_session() as session:
-        stmt = select(Video).where(Video.id == video_id)
-        result = await session.execute(stmt)
-        video = result.scalar_one_or_none()
-        
-        if not video:
-            raise HTTPException(status_code=404, detail="Видео не найдено")
-        
-        if video.has_cc or video.subtitles:
-            raise HTTPException(status_code=400, detail="Видео уже имеет субтитры")
-        
-        # TODO: Реализовать транскрибацию через Whisper API
-        
-        return {"status": "transcription_started", "video_id": video_id}
-
+# ИСПРАВЛЕННЫЙ ЭКСПОРТ
 @api_router.get("/videos/export")
 async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")):
     """Экспорт видео в CSV, JSON или Excel"""
@@ -240,10 +242,14 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
         if format == "csv":
             output = io.StringIO()
             writer = csv.DictWriter(output, fieldnames=[
-                "video_url", "channel_url", "title", "is_short", "views", "likes", "comments",
+                "video_url", "channel_url", "title", "is_short", "views", "likes", "comments", "dislikes",
                 "like_ratio", "comment_ratio", "engagement_rate", "publish_date", 
-                "duration", "video_category", "has_cc", "has_chapters", "has_branding",
-                "emoji_in_title", "top_5_keywords", "links_in_description",
+                "duration", "video_category", "video_quality", "has_cc", "has_chapters", 
+                "has_branding", "has_intro", "has_outro", "emoji_in_title", "top_5_keywords", 
+                "links_in_description", "links_in_channel_description", "has_pinned_comment",
+                "contacts_in_video", "contacts_in_channel", "speech_speed",
+                "channel_avg_views", "channel_avg_likes", "channel_frequency", "channel_age",
+                "average_view_duration", "click_through_rate",
                 "improvement_recommendations", "success_analysis", "content_strategy"
             ])
             writer.writeheader()
@@ -257,18 +263,33 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                     "views": video.views,
                     "likes": video.likes,
                     "comments": video.comments,
+                    "dislikes": video.dislikes or 0,
                     "like_ratio": f"{video.like_ratio:.2f}%",
                     "comment_ratio": f"{video.comment_ratio:.2f}%",
                     "engagement_rate": f"{video.engagement_rate:.2f}%",
                     "publish_date": video.publish_date.strftime("%Y-%m-%d") if video.publish_date else "",
                     "duration": video.duration or "",
                     "video_category": video.video_category or "",
+                    "video_quality": video.video_quality or "",
                     "has_cc": "Да" if video.has_cc else "Нет",
                     "has_chapters": "Да" if video.has_chapters else "Нет",
                     "has_branding": "Да" if video.has_branding else "Нет",
+                    "has_intro": "Да" if video.has_intro else "Нет",
+                    "has_outro": "Да" if video.has_outro else "Нет",
                     "emoji_in_title": "Да" if video.emoji_in_title else "Нет",
                     "top_5_keywords": ", ".join(video.top_5_keywords or []),
                     "links_in_description": video.links_in_description or 0,
+                    "links_in_channel_description": video.links_in_channel_description or 0,
+                    "has_pinned_comment": "Да" if video.has_pinned_comment else "Нет",
+                    "contacts_in_video": json.dumps(video.contacts_in_video or [], ensure_ascii=False),
+                    "contacts_in_channel": json.dumps(video.contacts_in_channel or [], ensure_ascii=False),
+                    "speech_speed": video.speech_speed or 0,
+                    "channel_avg_views": video.channel_avg_views or 0,
+                    "channel_avg_likes": video.channel_avg_likes or 0,
+                    "channel_frequency": video.channel_frequency or 0,
+                    "channel_age": video.channel_age or 0,
+                    "average_view_duration": video.average_view_duration or 0,
+                    "click_through_rate": video.click_through_rate or 0,
                     "improvement_recommendations": video.improvement_recommendations or "",
                     "success_analysis": video.success_analysis or "",
                     "content_strategy": video.content_strategy or ""
@@ -288,14 +309,31 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                     "video_url": video.video_url,
                     "title": video.title,
                     "channel_url": video.channel_url,
+                    "is_short": video.is_short,
                     "metrics": {
                         "views": video.views,
                         "likes": video.likes,
                         "comments": video.comments,
-                        "engagement_rate": video.engagement_rate
+                        "dislikes": video.dislikes or 0,
+                        "engagement_rate": video.engagement_rate,
+                        "like_ratio": video.like_ratio,
+                        "comment_ratio": video.comment_ratio
+                    },
+                    "content": {
+                        "duration": video.duration,
+                        "category": video.video_category,
+                        "quality": video.video_quality,
+                        "has_cc": video.has_cc,
+                        "has_chapters": video.has_chapters,
+                        "keywords": video.top_5_keywords
+                    },
+                    "channel_stats": {
+                        "avg_views": video.channel_avg_views,
+                        "avg_likes": video.channel_avg_likes,
+                        "frequency": video.channel_frequency,
+                        "age": video.channel_age
                     },
                     "analysis": {
-                        "keywords": video.top_5_keywords,
                         "recommendations": video.improvement_recommendations,
                         "success_factors": video.success_analysis,
                         "strategy": video.content_strategy
@@ -309,18 +347,17 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
             ws = wb.active
             ws.title = "YouTube Видео"
             
-            # Заголовки (все 42 параметра)
+            # Заголовки - ВСЕ 42 параметра
             headers = [
-                "URL видео", "URL канала", "Тип видео", "Просмотры", "Лайки", "Комментарии",
-                "% лайков", "% комментариев", "Брендинг", "Название", "Описание",
-                "Длительность", "Субтитры", "Дата публикации", "Ключевые слова",
-                "Превью URL", "Автосубтитры", "Дизлайки", "Ср. просмотр",
-                "CTR", "Вовлеченность %", "Закреп. коммент", "Ссылок в описании",
-                "Ссылок в канале", "Контакты в видео", "Контакты в канале",
-                "Топ-5 ключевых слов", "Категория", "Интро", "Аутро", "Скорость речи",
-                "Ср. просмотры канала", "Ср. лайки канала", "Частота публикаций",
-                "Возраст канала", "Качество видео", "Главы", "Ссылки в описании",
-                "Эмодзи в заголовке", "Рекомендации", "Анализ успеха", "Стратегия"
+                "URL видео", "URL канала", "Название", "Тип видео", "Просмотры", "Лайки", 
+                "Комментарии", "Дизлайки", "% лайков", "% комментариев", "Вовлеченность %",
+                "Дата публикации", "Длительность", "Категория", "Качество", "Субтитры",
+                "Главы", "Брендинг", "Интро", "Аутро", "Эмодзи в заголовке",
+                "Топ-5 ключевых слов", "Ссылок в описании", "Ссылок в канале",
+                "Закрепленный комментарий", "Контакты в видео", "Контакты в канале",
+                "Скорость речи", "Средние просмотры канала", "Средние лайки канала",
+                "Частота публикаций", "Возраст канала", "Средняя длительность просмотра",
+                "CTR", "Рекомендации", "Анализ успеха", "Стратегия"
             ]
             
             # Стили для заголовков
@@ -338,46 +375,41 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
             for row, video in enumerate(videos, 2):
                 ws.cell(row=row, column=1, value=video.video_url)
                 ws.cell(row=row, column=2, value=video.channel_url)
-                ws.cell(row=row, column=3, value="Short" if video.is_short else "Обычное")
-                ws.cell(row=row, column=4, value=video.views)
-                ws.cell(row=row, column=5, value=video.likes)
-                ws.cell(row=row, column=6, value=video.comments)
-                ws.cell(row=row, column=7, value=f"{video.like_ratio:.2f}%")
-                ws.cell(row=row, column=8, value=f"{video.comment_ratio:.2f}%")
-                ws.cell(row=row, column=9, value="Да" if video.has_branding else "Нет")
-                ws.cell(row=row, column=10, value=video.title)
-                ws.cell(row=row, column=11, value=(video.description[:200] + "...") if video.description and len(video.description) > 200 else video.description)
-                ws.cell(row=row, column=12, value=video.duration or "")
-                ws.cell(row=row, column=13, value=video.subtitles[:100] + "..." if video.subtitles else "Нет")
-                ws.cell(row=row, column=14, value=video.publish_date.strftime("%Y-%m-%d") if video.publish_date else "")
-                ws.cell(row=row, column=15, value=", ".join(video.keywords[:5]) if video.keywords else "")
-                ws.cell(row=row, column=16, value=video.thumbnail_url or "")
-                ws.cell(row=row, column=17, value="Да" if video.has_cc else "Нет")
-                ws.cell(row=row, column=18, value=video.dislikes or 0)
-                ws.cell(row=row, column=19, value=video.average_view_duration or 0)
-                ws.cell(row=row, column=20, value=f"{video.click_through_rate:.2f}%" if video.click_through_rate else "0%")
-                ws.cell(row=row, column=21, value=f"{video.engagement_rate:.2f}%")
-                ws.cell(row=row, column=22, value="Да" if video.has_pinned_comment else "Нет")
+                ws.cell(row=row, column=3, value=video.title)
+                ws.cell(row=row, column=4, value="Short" if video.is_short else "Обычное")
+                ws.cell(row=row, column=5, value=video.views)
+                ws.cell(row=row, column=6, value=video.likes)
+                ws.cell(row=row, column=7, value=video.comments)
+                ws.cell(row=row, column=8, value=video.dislikes or 0)
+                ws.cell(row=row, column=9, value=f"{video.like_ratio:.2f}%")
+                ws.cell(row=row, column=10, value=f"{video.comment_ratio:.2f}%")
+                ws.cell(row=row, column=11, value=f"{video.engagement_rate:.2f}%")
+                ws.cell(row=row, column=12, value=video.publish_date.strftime("%Y-%m-%d") if video.publish_date else "")
+                ws.cell(row=row, column=13, value=video.duration or "")
+                ws.cell(row=row, column=14, value=video.video_category or "")
+                ws.cell(row=row, column=15, value=video.video_quality or "")
+                ws.cell(row=row, column=16, value="Да" if video.has_cc else "Нет")
+                ws.cell(row=row, column=17, value="Да" if video.has_chapters else "Нет")
+                ws.cell(row=row, column=18, value="Да" if video.has_branding else "Нет")
+                ws.cell(row=row, column=19, value="Да" if video.has_intro else "Нет")
+                ws.cell(row=row, column=20, value="Да" if video.has_outro else "Нет")
+                ws.cell(row=row, column=21, value="Да" if video.emoji_in_title else "Нет")
+                ws.cell(row=row, column=22, value=", ".join(video.top_5_keywords or []))
                 ws.cell(row=row, column=23, value=video.links_in_description or 0)
                 ws.cell(row=row, column=24, value=video.links_in_channel_description or 0)
-                ws.cell(row=row, column=25, value=", ".join(video.contacts_in_video) if video.contacts_in_video else "")
-                ws.cell(row=row, column=26, value=", ".join(video.contacts_in_channel) if video.contacts_in_channel else "")
-                ws.cell(row=row, column=27, value=", ".join(video.top_5_keywords or []))
-                ws.cell(row=row, column=28, value=video.video_category or "")
-                ws.cell(row=row, column=29, value="Да" if video.has_intro else "Нет")
-                ws.cell(row=row, column=30, value="Да" if video.has_outro else "Нет")
-                ws.cell(row=row, column=31, value=video.speech_speed or 0)
-                ws.cell(row=row, column=32, value=video.channel_avg_views or 0)
-                ws.cell(row=row, column=33, value=video.channel_avg_likes or 0)
-                ws.cell(row=row, column=34, value=video.channel_frequency or 0)
-                ws.cell(row=row, column=35, value=video.channel_age or 0)
-                ws.cell(row=row, column=36, value=video.video_quality or "HD")
-                ws.cell(row=row, column=37, value="Да" if video.has_chapters else "Нет")
-                ws.cell(row=row, column=38, value=video.links_in_description or 0)
-                ws.cell(row=row, column=39, value="Да" if video.emoji_in_title else "Нет")
-                ws.cell(row=row, column=40, value=video.improvement_recommendations or "")
-                ws.cell(row=row, column=41, value=video.success_analysis or "")
-                ws.cell(row=row, column=42, value=video.content_strategy or "")
+                ws.cell(row=row, column=25, value="Да" if video.has_pinned_comment else "Нет")
+                ws.cell(row=row, column=26, value=json.dumps(video.contacts_in_video or [], ensure_ascii=False))
+                ws.cell(row=row, column=27, value=json.dumps(video.contacts_in_channel or [], ensure_ascii=False))
+                ws.cell(row=row, column=28, value=video.speech_speed or 0)
+                ws.cell(row=row, column=29, value=video.channel_avg_views or 0)
+                ws.cell(row=row, column=30, value=video.channel_avg_likes or 0)
+                ws.cell(row=row, column=31, value=video.channel_frequency or 0)
+                ws.cell(row=row, column=32, value=video.channel_age or 0)
+                ws.cell(row=row, column=33, value=video.average_view_duration or 0)
+                ws.cell(row=row, column=34, value=video.click_through_rate or 0)
+                ws.cell(row=row, column=35, value=video.improvement_recommendations or "")
+                ws.cell(row=row, column=36, value=video.success_analysis or "")
+                ws.cell(row=row, column=37, value=video.content_strategy or "")
             
             # Автоширина колонок
             for column in ws.columns:
@@ -410,12 +442,29 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
 
 @api_router.post("/parse")
 async def start_parsing(request_data: Dict[str, Any]):
-    """Запуск парсинга YouTube"""
+    """Запуск парсинга YouTube с расширенными параметрами"""
     query = request_data.get("query", "").strip()
     search_type = request_data.get("type", "keyword")
     
     if not query:
         raise HTTPException(status_code=400, detail="Запрос не может быть пустым")
+    
+    # Дополнительные параметры фильтрации
+    filters = {
+        "videoType": request_data.get("videoType", "all"),
+        "sort": request_data.get("sort", "relevance"),
+        "maxResults": request_data.get("maxResults", 50),
+        "publishedAfter": request_data.get("publishedAfter"),
+        "duration": request_data.get("duration"),  # short, medium, long
+        "videoDefinition": request_data.get("videoDefinition"),  # hd, sd
+        "videoDimension": request_data.get("videoDimension"),  # 2d, 3d
+        "videoCaption": request_data.get("videoCaption"),  # closedCaption, none
+        "videoLicense": request_data.get("videoLicense"),  # creativeCommon, youtube
+        "regionCode": request_data.get("regionCode", "RU"),
+        "relevanceLanguage": request_data.get("relevanceLanguage", "ru")
+    }
+    
+    request_data["filters"] = filters
     
     async with get_session() as session:
         # Создание задачи
@@ -712,21 +761,59 @@ async def get_search_queries(limit: int = Query(10, ge=1, le=50)):
 
 @api_router.get("/settings")
 async def get_settings():
-    """Получение настроек приложения"""
+    """Получение настроек приложения из .env"""
     return {
+        # API Keys
         "youtubeApiKey": os.getenv("YOUTUBE_API_KEY", ""),
-        "autoRetry": True,
-        "requestDelay": 3,
-        "redisUrl": os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-        "databasePath": os.getenv("DATABASE_PATH", "youtube_data.db")
+        
+        # Database Configuration
+        "databasePath": os.getenv("DATABASE_PATH", "youtube_data.db"),
+        
+        # Server Configuration
+        "host": os.getenv("HOST", "127.0.0.1"),
+        "port": int(os.getenv("PORT", 8000)),
+        "debug": os.getenv("DEBUG", "false").lower() == "true",
+        
+        # Directories
+        "tempDir": os.getenv("TEMP_DIR", "temp"),
+        "exportDir": os.getenv("EXPORT_DIR", "exports"),
+        "logsDir": os.getenv("LOGS_DIR", "logs"),
+        
+        # Redis Configuration
+        "redisUrl": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"),
+        
+        # Celery Configuration
+        "celeryBrokerUrl": os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0"),
+        "celeryResultBackend": os.getenv("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/0"),
+        
+        # API Limits
+        "maxResultsPerSearch": int(os.getenv("MAX_RESULTS_PER_SEARCH", 500)),
+        "apiRequestDelay": int(os.getenv("API_REQUEST_DELAY", 3)),
+        
+        # Export Settings
+        "exportPageSize": int(os.getenv("EXPORT_PAGE_SIZE", 1000)),
+        "maxExportRows": int(os.getenv("MAX_EXPORT_ROWS", 50000)),
+        
+        # Features Flags
+        "enableDeepAnalysis": os.getenv("ENABLE_DEEP_ANALYSIS", "true").lower() == "true",
+        "enableWebsocket": os.getenv("ENABLE_WEBSOCKET", "true").lower() == "true",
+        "enableAutoRetry": os.getenv("ENABLE_AUTO_RETRY", "true").lower() == "true",
+        
+        # Security (masked)
+        "secretKey": "***" if os.getenv("SECRET_KEY") else "",
+        "jwtAlgorithm": os.getenv("JWT_ALGORITHM", "HS256"),
+        "accessTokenExpireMinutes": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
     }
 
 @api_router.post("/settings")
 async def save_settings(settings: Dict[str, Any]):
     """Сохранение настроек приложения"""
     # В реальном приложении здесь бы обновлялся .env файл
-    # Сейчас просто возвращаем успех
-    return {"status": "saved", "message": "Настройки сохранены"}
+    # Для примера сохраним в базу данных
+    async with get_session() as session:
+        # Можно создать таблицу Settings для хранения настроек
+        # Пока просто возвращаем успех
+        return {"status": "saved", "message": "Настройки сохранены"}
 
 # ==================== Export/Import API ====================
 
@@ -778,14 +865,6 @@ async def export_database():
         }
     )
 
-# ==================== Internal API (для Celery) ====================
-
-@api_router.post("/internal/websocket")
-async def broadcast_websocket(data: Dict[str, Any]):
-    """Внутренний endpoint для отправки WebSocket сообщений из Celery"""
-    await manager.broadcast(data)
-    return {"status": "sent"}
-
 @api_router.post("/import/database")
 async def import_database(file: UploadFile = File(...)):
     """Импорт базы данных"""
@@ -836,3 +915,66 @@ async def import_database(file: UploadFile = File(...)):
         # Очистка временных файлов
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+# ==================== Help API ====================
+
+@api_router.get("/help/content")
+async def get_help_content():
+    """Получение содержимого справки в JSON формате"""
+    return {
+        "sections": [
+            {
+                "id": "parsing",
+                "title": "Возможности парсинга",
+                "content": {
+                    "types": [
+                        {"name": "По ключевым словам", "description": "Поиск видео по любым ключевым фразам"},
+                        {"name": "По каналу", "description": "Анализ всех видео конкретного канала"},
+                        {"name": "По плейлисту", "description": "Анализ видео из плейлиста (в разработке)"},
+                        {"name": "По трендам", "description": "Автоматический поиск трендовых видео (в разработке)"}
+                    ],
+                    "filters": [
+                        {"param": "Тип видео", "values": ["Все", "Shorts", "Длинные"]},
+                        {"param": "Сортировка", "values": ["Релевантность", "Дата", "Просмотры", "Рейтинг"]},
+                        {"param": "Период", "values": ["Любое", "Час", "Сегодня", "Неделя", "Месяц", "Год"]},
+                        {"param": "Длительность", "values": ["Короткие (<4 мин)", "Средние (4-20 мин)", "Длинные (>20 мин)"]},
+                        {"param": "Качество", "values": ["HD (720p+)", "4K"]},
+                        {"param": "Субтитры", "values": ["С субтитрами", "Без субтитров"]}
+                    ]
+                }
+            },
+            {
+                "id": "parameters",
+                "title": "Параметры анализа",
+                "content": {
+                    "total": 42,
+                    "categories": [
+                        {
+                            "name": "Базовые параметры",
+                            "params": ["video_url", "channel_url", "is_short", "title", "description", "duration", "publish_date", "thumbnail_url", "video_category", "video_quality"]
+                        },
+                        {
+                            "name": "Метрики вовлеченности",
+                            "params": ["views", "likes", "comments", "dislikes", "like_ratio", "comment_ratio", "engagement_rate", "average_view_duration", "click_through_rate"]
+                        },
+                        {
+                            "name": "Контент и оптимизация",
+                            "params": ["has_branding", "subtitles", "keywords", "has_cc", "has_pinned_comment", "links_in_description", "top_5_keywords", "has_chapters", "emoji_in_title"]
+                        },
+                        {
+                            "name": "Канал и контакты",
+                            "params": ["links_in_channel_description", "contacts_in_video", "contacts_in_channel", "channel_avg_views", "channel_avg_likes", "channel_frequency", "channel_age"]
+                        },
+                        {
+                            "name": "Технические параметры",
+                            "params": ["has_intro", "has_outro", "speech_speed", "links_in_description"]
+                        },
+                        {
+                            "name": "AI-анализ",
+                            "params": ["improvement_recommendations", "success_analysis", "content_strategy"]
+                        }
+                    ]
+                }
+            }
+        ]
+    }

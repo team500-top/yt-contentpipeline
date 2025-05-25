@@ -10,16 +10,25 @@ createApp({
                 { id: 'videos', name: 'Видео', badge: 0 },
                 { id: 'tasks', name: 'Задачи', badge: 0 },
                 { id: 'analytics', name: 'Аналитика' },
-                { id: 'settings', name: 'Настройки' }
+                { id: 'settings', name: 'Настройки' },
+                { id: 'help', name: 'Справка' }
             ],
             
-            // Search form
+            // Search form с расширенными параметрами
             searchForm: {
                 type: 'keyword',
                 query: '',
                 videoType: 'all',
                 sort: 'relevance',
-                maxResults: 50
+                maxResults: 50,
+                // Новые параметры фильтрации
+                duration: '', // short, medium, long
+                publishedAfter: '', // дата
+                videoDefinition: '', // hd, sd
+                videoDimension: '', // 2d, 3d
+                videoCaption: '', // closedCaption, none
+                regionCode: 'RU',
+                relevanceLanguage: 'ru'
             },
             isSearching: false,
             
@@ -31,6 +40,13 @@ createApp({
                 search: '',
                 type: '',
                 sort: 'date'
+            },
+            
+            // Table scroll sync
+            tableWidth: 2000,
+            scrollPositions: {
+                top: 0,
+                bottom: 0
             },
             
             // Tasks
@@ -46,11 +62,46 @@ createApp({
             },
             topVideos: [],
             
-            // Settings
+            // Settings - расширенные настройки из .env
             settings: {
+                // API Keys
                 youtubeApiKey: '',
-                autoRetry: true,
-                requestDelay: 3
+                
+                // Database
+                databasePath: '',
+                
+                // Server
+                host: '127.0.0.1',
+                port: 8000,
+                debug: true,
+                
+                // Directories
+                tempDir: 'temp',
+                exportDir: 'exports',
+                logsDir: 'logs',
+                
+                // Redis
+                redisUrl: '',
+                celeryBrokerUrl: '',
+                celeryResultBackend: '',
+                
+                // API Limits
+                maxResultsPerSearch: 500,
+                apiRequestDelay: 3,
+                
+                // Export
+                exportPageSize: 1000,
+                maxExportRows: 50000,
+                
+                // Features
+                enableDeepAnalysis: true,
+                enableWebsocket: true,
+                enableAutoRetry: true,
+                
+                // Security
+                secretKey: '',
+                jwtAlgorithm: 'HS256',
+                accessTokenExpireMinutes: 30
             },
             
             // UI State
@@ -114,19 +165,12 @@ createApp({
         // Update badges
         this.updateBadges();
         
-        // Auto-refresh tasks every 2 seconds if active tasks
+        // Auto-refresh tasks
         setInterval(() => {
             if (this.activeTab === 'tasks' && this.activeTasks.length > 0) {
                 this.loadTasks();
             }
         }, 2000);
-        
-        // Auto-refresh videos every 5 seconds if on videos tab
-        setInterval(() => {
-            if (this.activeTab === 'videos') {
-                this.loadVideos();
-            }
-        }, 5000);
     },
     
     beforeUnmount() {
@@ -185,37 +229,14 @@ createApp({
         },
         
         handleWebSocketMessage(data) {
-            console.log('WebSocket message:', data);
-            
             switch (data.type) {
                 case 'task_update':
                     this.updateTask(data.task);
-                    if (this.activeTab === 'parsing' || this.activeTab === 'tasks') {
-                        this.showNotification({
-                            type: 'info',
-                            title: 'Прогресс задачи',
-                            message: `Обработано ${data.task.processed_items} из ${data.task.total_items} видео`
-                        });
-                    }
                     break;
-                    
                 case 'video_added':
-                    // Добавляем видео в начало списка
-                    const existingIndex = this.videos.findIndex(v => v.id === data.video.id);
-                    if (existingIndex === -1) {
-                        this.videos.unshift(data.video);
-                        this.updateBadges();
-                        
-                        if (this.activeTab === 'videos') {
-                            this.showNotification({
-                                type: 'success',
-                                title: 'Новое видео',
-                                message: `Добавлено: ${data.video.title}`
-                            });
-                        }
-                    }
+                    this.videos.unshift(data.video);
+                    this.updateBadges();
                     break;
-                    
                 case 'notification':
                     this.showNotification(data.notification);
                     break;
@@ -372,45 +393,21 @@ createApp({
             }
         },
         
-        async transcribeVideo(video) {
-            if (!confirm(`Начать транскрибацию видео "${video.title}"?`)) return;
-            
+        async exportVideos(format = 'excel') {
             try {
-                const response = await axios.post(`/api/videos/${video.id}/transcribe`);
-                this.showNotification({
-                    type: 'success',
-                    title: 'Транскрибация запущена',
-                    message: 'Процесс может занять несколько минут'
-                });
-            } catch (error) {
-                this.showNotification({
-                    type: 'error',
-                    title: 'Ошибка',
-                    message: 'Не удалось запустить транскрибацию'
-                });
-            }
-        },
-        
-        async exportVideos() {
-            try {
-                const format = await this.selectExportFormat();
-                if (!format) return;
-                
                 const response = await axios.get(`/api/videos/export?format=${format}`, {
                     responseType: 'blob'
                 });
                 
+                const contentType = response.headers['content-type'];
+                let extension = 'xlsx';
+                if (contentType.includes('csv')) extension = 'csv';
+                else if (contentType.includes('json')) extension = 'json';
+                
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
                 link.href = url;
-                
-                const extensions = {
-                    'csv': 'csv',
-                    'json': 'json',
-                    'excel': 'xlsx'
-                };
-                
-                link.setAttribute('download', `youtube_analysis_${new Date().toISOString().split('T')[0]}.${extensions[format]}`);
+                link.setAttribute('download', `youtube_analysis_${new Date().toISOString().split('T')[0]}.${extension}`);
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -418,9 +415,10 @@ createApp({
                 this.showNotification({
                     type: 'success',
                     title: 'Экспорт завершен',
-                    message: 'Файл загружен'
+                    message: `Файл загружен в формате ${format.toUpperCase()}`
                 });
             } catch (error) {
+                console.error('Export error:', error);
                 this.showNotification({
                     type: 'error',
                     title: 'Ошибка',
@@ -429,23 +427,23 @@ createApp({
             }
         },
         
-        async selectExportFormat() {
-            // Простой диалог выбора формата
-            const format = prompt('Выберите формат экспорта:\n1. Excel (рекомендуется)\n2. CSV\n3. JSON\n\nВведите номер (1-3):');
-            const formats = {
-                '1': 'excel',
-                '2': 'csv',
-                '3': 'json'
-            };
-            return formats[format] || null;
-        },
-        
         resetFilters() {
             this.videoFilters = {
                 search: '',
                 type: '',
                 sort: 'date'
             };
+        },
+        
+        // Table scroll sync
+        syncScroll(source, event) {
+            const scrollLeft = event.target.scrollLeft;
+            
+            if (source === 'top' && this.$refs.tableContainer) {
+                this.$refs.tableContainer.scrollLeft = scrollLeft;
+            } else if (source === 'bottom' && this.$refs.topScroll) {
+                this.$refs.topScroll.scrollLeft = scrollLeft;
+            }
         },
         
         // Tasks
@@ -559,13 +557,8 @@ createApp({
         updateTask(updatedTask) {
             const index = this.tasks.findIndex(t => t.id === updatedTask.id);
             if (index !== -1) {
-                // Обновляем существующую задачу
-                Object.assign(this.tasks[index], updatedTask);
-            } else {
-                // Добавляем новую задачу
-                this.tasks.unshift(updatedTask);
+                this.tasks[index] = updatedTask;
             }
-            this.updateBadges();
         },
         
         // Settings
@@ -709,31 +702,6 @@ createApp({
             }
         },
         
-        // Helpers
-        formatDuration(duration) {
-            if (!duration) return '-';
-            // Преобразование ISO 8601 в читаемый формат
-            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            if (!match) return duration;
-            
-            const hours = match[1] || 0;
-            const minutes = match[2] || 0;
-            const seconds = match[3] || 0;
-            
-            if (hours > 0) {
-                return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            }
-            return `${minutes}:${String(seconds).padStart(2, '0')}`;
-        },
-        
-        getEngagementClass(rate) {
-            if (rate >= 10) return 'text-green-600 font-bold';
-            if (rate >= 5) return 'text-green-600';
-            if (rate >= 2) return 'text-yellow-600';
-            if (rate >= 1) return 'text-orange-600';
-            return 'text-red-600';
-        },
-        
         // UI Helpers
         updateBadges() {
             this.tabs[1].badge = this.videos.length;
@@ -770,6 +738,22 @@ createApp({
             if (days < 365) return `${Math.floor(days / 30)} месяцев назад`;
             
             return d.toLocaleDateString('ru-RU');
+        },
+        
+        formatDuration(duration) {
+            if (!duration) return '';
+            // Парсинг ISO 8601 duration (PT15M43S)
+            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (!match) return duration;
+            
+            const hours = parseInt(match[1] || 0);
+            const minutes = parseInt(match[2] || 0);
+            const seconds = parseInt(match[3] || 0);
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         },
         
         getTaskTypeName(type) {
