@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Content Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-enter-active, .slide-leave-active { transition: transform 0.3s; }
+        .slide-enter-from { transform: translateX(100%); }
+        .slide-leave-to { transform: translateX(-100%); }
+    </style>
+</head>
+<body class="h-full bg-gray-50">
+    <div id="app" class="h-full">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <svg class="w-8 h-8 text-red-600 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                        <h1 class="text-xl font-semibold text-gray-900">YouTube Content Analyzer</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500">{{ currentTime }}</span>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                            <span class="text-sm text-gray-600">Онлайн</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-8">
+                    <button
+                        v-for="tab in tabs"
+                        :key="tab.id"
+                        @click="activeTab = tab.id"
+                        :class="[
+                            'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+                            activeTab === tab.id
+                                ? 'border-red-500 text-red-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ]"
+                    >
+                        {{ tab.name }}
+                        <span v-if="tab.badge" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-600">
+                            {{ tab.badge }}
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <transition name="fade" mode="out-in">
+                    <!-- Парсинг Tab -->
+                    <div v-if="activeTab === 'parsing'" key="parsing">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Парсинг YouTube</h2>
+                        
+                        <!-- Search Form -->
+                        <div class="bg-white rounded-lg shadow p-6 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Тип поиска</label>
+                                    <select v-model="searchForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                        <option value="keyword">По ключевым словам</option>
+                                        <option value="channel">По каналу</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Запрос</label>
+                                    <input
+                                        v-model="searchForm.query"
+                                        type="text"
+                                        :placeholder="searchForm.type === 'keyword' ? 'Введите ключевые слова...' : 'URL канала или @username'"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    >
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Тип видео</label>
+                                    <select v-model="searchForm.videoType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                        <option value="all">Все</option>
+                                        <option value="shorts">Только Shorts</option>
+                                        <option value="long">Только длинные</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Сортировка</label>
+                                    <select v-model="searchForm.sort" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                        <option value="relevance">По релевантности</option>
+                                        <option value="date">По дате</option>
+                                        <option value="viewCount">По просмотрам</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Количество</label>
+                                    <input
+                                        v-model.number="searchForm.maxResults"
+                                        type="number"
+                                        min="1"
+                                        max="500"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    >
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <button
+                                    @click="startParsing"
+                                    :disabled="!searchForm.query || isSearching"
+                                    class="px-6 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span v-if="!isSearching">Начать парсинг</span>
+                                    <span v-else class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Поиск...
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Searches -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Недавние запросы</h3>
+                            <div class="space-y-3">
+                                <div v-for="query in recentQueries" :key="query.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ query.query }}</p>
+                                        <p class="text-sm text-gray-500">{{ query.type }} • {{ query.results }} результатов • {{ formatDate(query.date) }}</p>
+                                    </div>
+                                    <button @click="repeatSearch(query)" class="text-red-600 hover:text-red-700">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Видео Tab -->
+                    <div v-else-if="activeTab === 'videos'" key="videos">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">Видео</h2>
+                            <div class="flex items-center space-x-4">
+                                <button @click="viewMode = 'table'" :class="['p-2 rounded', viewMode === 'table' ? 'bg-gray-200' : 'hover:bg-gray-100']">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                                <button @click="viewMode = 'cards'" :class="['p-2 rounded', viewMode === 'cards' ? 'bg-gray-200' : 'hover:bg-gray-100']">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                                    </svg>
+                                </button>
+                                <button @click="exportVideos" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                                    Экспорт
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="bg-white rounded-lg shadow p-4 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <input
+                                    v-model="videoFilters.search"
+                                    type="text"
+                                    placeholder="Поиск по названию..."
+                                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                                <select v-model="videoFilters.type" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                    <option value="">Все типы</option>
+                                    <option value="shorts">Shorts</option>
+                                    <option value="long">Длинные</option>
+                                </select>
+                                <select v-model="videoFilters.sort" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                    <option value="date">По дате</option>
+                                    <option value="views">По просмотрам</option>
+                                    <option value="engagement">По вовлеченности</option>
+                                </select>
+                                <button @click="resetFilters" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                                    Сбросить
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Videos Table View -->
+                        <div v-if="viewMode === 'table'" class="bg-white rounded-lg shadow overflow-hidden">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Видео</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Метрики</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Вовлеченность</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="video in filteredVideos" :key="video.id" class="hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <img :src="video.thumbnail_url" :alt="video.title" class="w-24 h-14 object-cover rounded">
+                                                <div class="ml-4">
+                                                    <p class="text-sm font-medium text-gray-900 line-clamp-2">{{ video.title }}</p>
+                                                    <p class="text-xs text-gray-500">{{ video.channel_name }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <p class="text-sm text-gray-900">{{ formatNumber(video.views) }} просмотров</p>
+                                            <p class="text-xs text-gray-500">{{ formatNumber(video.likes) }} лайков</p>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <span class="text-sm font-medium text-gray-900">{{ video.engagement_rate.toFixed(2) }}%</span>
+                                                <span v-if="video.is_short" class="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">Short</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">
+                                            {{ formatDate(video.publish_date) }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <button @click="viewVideo(video)" class="text-red-600 hover:text-red-900 text-sm font-medium">
+                                                Подробнее
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Videos Card View -->
+                        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div v-for="video in filteredVideos" :key="video.id" class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer" @click="viewVideo(video)">
+                                <div class="relative">
+                                    <img :src="video.thumbnail_url" :alt="video.title" class="w-full h-48 object-cover rounded-t-lg">
+                                    <span v-if="video.is_short" class="absolute top-2 right-2 px-2 py-1 text-xs bg-purple-600 text-white rounded">Short</span>
+                                    <span class="absolute bottom-2 right-2 px-2 py-1 text-xs bg-black bg-opacity-75 text-white rounded">{{ video.duration }}</span>
+                                </div>
+                                <div class="p-4">
+                                    <h3 class="font-medium text-gray-900 line-clamp-2 mb-2">{{ video.title }}</h3>
+                                    <p class="text-sm text-gray-500 mb-3">{{ video.channel_name }}</p>
+                                    <div class="flex justify-between items-center text-sm text-gray-600">
+                                        <span>{{ formatNumber(video.views) }} просмотров</span>
+                                        <span>{{ formatDate(video.publish_date) }}</span>
+                                    </div>
+                                    <div class="mt-3 pt-3 border-t border-gray-200">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-medium text-gray-900">Вовлеченность: {{ video.engagement_rate.toFixed(2) }}%</span>
+                                            <div class="flex space-x-2">
+                                                <span class="text-xs text-gray-500">👍 {{ formatNumber(video.likes) }}</span>
+                                                <span class="text-xs text-gray-500">💬 {{ formatNumber(video.comments) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Задачи Tab -->
+                    <div v-else-if="activeTab === 'tasks'" key="tasks">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Задачи</h2>
+                        
+                        <!-- Tasks Controls -->
+                        <div class="bg-white rounded-lg shadow p-4 mb-6">
+                            <div class="flex justify-between items-center">
+                                <div class="flex space-x-4">
+                                    <button @click="pauseAllTasks" class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
+                                        Приостановить все
+                                    </button>
+                                    <button @click="resumeAllTasks" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                                        Возобновить все
+                                    </button>
+                                </div>
+                                <button @click="clearCompletedTasks" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                                    Очистить завершенные
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Active Tasks -->
+                        <div class="space-y-4">
+                            <div v-for="task in tasks" :key="task.id" class="bg-white rounded-lg shadow p-6">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="font-medium text-gray-900">{{ getTaskTypeName(task.task_type) }}</h3>
+                                        <p class="text-sm text-gray-500">{{ task.parameters.query || task.parameters.channel }}</p>
+                                    </div>
+                                    <span :class="['px-3 py-1 text-xs font-medium rounded-full', getTaskStatusClass(task.status)]">
+                                        {{ getTaskStatusName(task.status) }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Progress Bar -->
+                                <div class="mb-4">
+                                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                        <span>Прогресс: {{ task.processed_items }} / {{ task.total_items }}</span>
+                                        <span>{{ task.progress.toFixed(0) }}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div :style="{width: task.progress + '%'}" class="bg-red-600 h-2 rounded-full transition-all duration-300"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Task Actions -->
+                                <div class="flex justify-between items-center">
+                                    <p class="text-sm text-gray-500">
+                                        Создана: {{ formatDate(task.created_at) }}
+                                    </p>
+                                    <div class="flex space-x-2">
+                                        <button v-if="task.status === 'running'" @click="pauseTask(task.id)" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
+                                            Пауза
+                                        </button>
+                                        <button v-else-if="task.status === 'paused'" @click="resumeTask(task.id)" class="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
+                                            Продолжить
+                                        </button>
+                                        <button @click="cancelTask(task.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                            Отменить
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div v-if="tasks.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">Нет активных задач</h3>
+                            <p class="mt-1 text-sm text-gray-500">Начните парсинг, чтобы создать новые задачи.</p>
+                        </div>
+                    </div>
+
+                    <!-- Аналитика Tab -->
+                    <div v-else-if="activeTab === 'analytics'" key="analytics">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Аналитика</h2>
+                        
+                        <!-- Stats Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <p class="text-sm font-medium text-gray-500">Всего видео</p>
+                                <p class="mt-2 text-3xl font-semibold text-gray-900">{{ stats.totalVideos }}</p>
+                                <p class="mt-1 text-sm text-green-600">+{{ stats.videosThisWeek }} за неделю</p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <p class="text-sm font-medium text-gray-500">Каналов</p>
+                                <p class="mt-2 text-3xl font-semibold text-gray-900">{{ stats.totalChannels }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <p class="text-sm font-medium text-gray-500">Средняя вовлеченность</p>
+                                <p class="mt-2 text-3xl font-semibold text-gray-900">{{ stats.avgEngagement }}%</p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <p class="text-sm font-medium text-gray-500">Топ категория</p>
+                                <p class="mt-2 text-xl font-semibold text-gray-900">{{ stats.topCategory }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Тренды просмотров</h3>
+                                <canvas id="viewsChart"></canvas>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Распределение по типам</h3>
+                                <canvas id="typeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Top Performing Videos -->
+                        <div class="mt-8 bg-white rounded-lg shadow">
+                            <div class="p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Топ видео по вовлеченности</h3>
+                                <div class="space-y-4">
+                                    <div v-for="(video, index) in topVideos" :key="video.id" class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <span class="text-2xl font-bold text-gray-400 mr-4">{{ index + 1 }}</span>
+                                            <div>
+                                                <p class="font-medium text-gray-900">{{ video.title }}</p>
+                                                <p class="text-sm text-gray-500">{{ video.channel_name }} • {{ formatNumber(video.views) }} просмотров</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-semibold text-gray-900">{{ video.engagement_rate.toFixed(2) }}%</p>
+                                            <p class="text-sm text-gray-500">вовлеченность</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Настройки Tab -->
+                    <div v-else-if="activeTab === 'settings'" key="settings">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Настройки</h2>
+                        
+                        <div class="space-y-6">
+                            <!-- API Settings -->
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">API ключи</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">YouTube API Key</label>
+                                        <input
+                                            v-model="settings.youtubeApiKey"
+                                            type="password"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Parsing Settings -->
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Настройки парсинга</h3>
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-medium text-gray-900">Автоматический повтор при ошибке</p>
+                                            <p class="text-sm text-gray-500">Повторять неудачные запросы автоматически</p>
+                                        </div>
+                                        <button @click="settings.autoRetry = !settings.autoRetry" :class="['relative inline-flex h-6 w-11 items-center rounded-full', settings.autoRetry ? 'bg-red-600' : 'bg-gray-200']">
+                                            <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', settings.autoRetry ? 'translate-x-6' : 'translate-x-1']"></span>
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Задержка между запросами (сек)</label>
+                                        <input
+                                            v-model.number="settings.requestDelay"
+                                            type="number"
+                                            min="1"
+                                            max="60"
+                                            class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Export/Import -->
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Экспорт и импорт данных</h3>
+                                <div class="flex space-x-4">
+                                    <button @click="exportDatabase" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                                        Экспорт базы данных
+                                    </button>
+                                    <button @click="importDatabase" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                                        Импорт базы данных
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Save Button -->
+                            <div class="flex justify-end">
+                                <button @click="saveSettings" class="px-6 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700">
+                                    Сохранить настройки
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+        </main>
+
+        <!-- Video Detail Modal -->
+        <transition name="fade">
+            <div v-if="selectedVideo" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50" @click.self="selectedVideo = null">
+                <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h2 class="text-2xl font-bold text-gray-900">{{ selectedVideo.title }}</h2>
+                            <button @click="selectedVideo = null" class="text-gray-400 hover:text-gray-500">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <img :src="selectedVideo.thumbnail_url" :alt="selectedVideo.title" class="w-full rounded-lg mb-4">
+                                <div class="space-y-3">
+                                    <div>
+                                        <h3 class="font-medium text-gray-900">Описание</h3>
+                                        <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ selectedVideo.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h3 class="font-medium text-gray-900 mb-3">Метрики</h3>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500">Просмотры</p>
+                                            <p class="text-xl font-semibold">{{ formatNumber(selectedVideo.views) }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Лайки</p>
+                                            <p class="text-xl font-semibold">{{ formatNumber(selectedVideo.likes) }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Комментарии</p>
+                                            <p class="text-xl font-semibold">{{ formatNumber(selectedVideo.comments) }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Вовлеченность</p>
+                                            <p class="text-xl font-semibold">{{ selectedVideo.engagement_rate.toFixed(2) }}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="selectedVideo.top_5_keywords" class="bg-gray-50 rounded-lg p-4">
+                                    <h3 class="font-medium text-gray-900 mb-3">Топ ключевые слова</h3>
+                                    <div class="flex flex-wrap gap-2">
+                                        <span v-for="keyword in selectedVideo.top_5_keywords" :key="keyword" class="px-3 py-1 bg-white text-sm text-gray-700 rounded-full border border-gray-200">
+                                            {{ keyword }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="selectedVideo.improvement_recommendations" class="bg-blue-50 rounded-lg p-4">
+                                    <h3 class="font-medium text-gray-900 mb-2">Рекомендации по улучшению</h3>
+                                    <p class="text-sm text-gray-700">{{ selectedVideo.improvement_recommendations }}</p>
+                                </div>
+                                
+                                <div v-if="selectedVideo.success_analysis" class="bg-green-50 rounded-lg p-4">
+                                    <h3 class="font-medium text-gray-900 mb-2">Анализ успеха</h3>
+                                    <p class="text-sm text-gray-700">{{ selectedVideo.success_analysis }}</p>
+                                </div>
+                                
+                                <div class="flex space-x-3">
+                                    <a :href="selectedVideo.video_url" target="_blank" class="flex-1 px-4 py-2 bg-red-600 text-white text-center rounded-md hover:bg-red-700">
+                                        Смотреть на YouTube
+                                    </a>
+                                    <button @click="analyzeVideo(selectedVideo)" class="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                                        Глубокий анализ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Notification Toast -->
+        <transition name="slide">
+            <div v-if="notification" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-sm z-50">
+                <div class="flex items-start">
+                    <div v-if="notification.type === 'success'" class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div v-else-if="notification.type === 'error'" class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3 w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-900">{{ notification.title }}</p>
+                        <p class="mt-1 text-sm text-gray-500">{{ notification.message }}</p>
+                    </div>
+                    <button @click="notification = null" class="ml-4 flex-shrink-0 flex">
+                        <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </transition>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
