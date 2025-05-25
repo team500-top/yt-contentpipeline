@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 import json
 import logging
+from dotenv import load_dotenv
+
+# Загрузка переменных окружения
+load_dotenv()
 
 from database import get_sync_session
 from models import Video, Task as TaskModel, Channel, SearchQuery

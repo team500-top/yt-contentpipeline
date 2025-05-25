@@ -216,12 +216,13 @@ createApp({
             ]);
         },
         
-        async loadVideos() {
+async loadVideos() {
             try {
                 const response = await axios.get('/api/videos');
-                this.videos = response.data;
+                this.videos = response.data.videos || [];
                 this.updateBadges();
             } catch (error) {
+                console.error('Failed to load videos:', error);
                 this.showNotification({
                     type: 'error',
                     title: 'Ошибка',
