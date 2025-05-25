@@ -14,7 +14,7 @@ load_dotenv()
 # Импорт модулей проекта
 from database import init_db, close_db
 from api import api_router
-from websocket import websocket_endpoint
+from websocket import websocket_endpoint, manager
 
 # Создание необходимых директорий
 Path("temp").mkdir(exist_ok=True)

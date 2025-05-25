@@ -114,12 +114,19 @@ createApp({
         // Update badges
         this.updateBadges();
         
-        // Auto-refresh tasks
+        // Auto-refresh tasks every 2 seconds if active tasks
         setInterval(() => {
             if (this.activeTab === 'tasks' && this.activeTasks.length > 0) {
                 this.loadTasks();
             }
         }, 2000);
+        
+        // Auto-refresh videos every 5 seconds if on videos tab
+        setInterval(() => {
+            if (this.activeTab === 'videos') {
+                this.loadVideos();
+            }
+        }, 5000);
     },
     
     beforeUnmount() {
@@ -178,14 +185,37 @@ createApp({
         },
         
         handleWebSocketMessage(data) {
+            console.log('WebSocket message:', data);
+            
             switch (data.type) {
                 case 'task_update':
                     this.updateTask(data.task);
+                    if (this.activeTab === 'parsing' || this.activeTab === 'tasks') {
+                        this.showNotification({
+                            type: 'info',
+                            title: 'Прогресс задачи',
+                            message: `Обработано ${data.task.processed_items} из ${data.task.total_items} видео`
+                        });
+                    }
                     break;
+                    
                 case 'video_added':
-                    this.videos.unshift(data.video);
-                    this.updateBadges();
+                    // Добавляем видео в начало списка
+                    const existingIndex = this.videos.findIndex(v => v.id === data.video.id);
+                    if (existingIndex === -1) {
+                        this.videos.unshift(data.video);
+                        this.updateBadges();
+                        
+                        if (this.activeTab === 'videos') {
+                            this.showNotification({
+                                type: 'success',
+                                title: 'Новое видео',
+                                message: `Добавлено: ${data.video.title}`
+                            });
+                        }
+                    }
                     break;
+                    
                 case 'notification':
                     this.showNotification(data.notification);
                     break;
@@ -216,7 +246,7 @@ createApp({
             ]);
         },
         
-async loadVideos() {
+        async loadVideos() {
             try {
                 const response = await axios.get('/api/videos');
                 this.videos = response.data.videos || [];
@@ -342,16 +372,45 @@ async loadVideos() {
             }
         },
         
+        async transcribeVideo(video) {
+            if (!confirm(`Начать транскрибацию видео "${video.title}"?`)) return;
+            
+            try {
+                const response = await axios.post(`/api/videos/${video.id}/transcribe`);
+                this.showNotification({
+                    type: 'success',
+                    title: 'Транскрибация запущена',
+                    message: 'Процесс может занять несколько минут'
+                });
+            } catch (error) {
+                this.showNotification({
+                    type: 'error',
+                    title: 'Ошибка',
+                    message: 'Не удалось запустить транскрибацию'
+                });
+            }
+        },
+        
         async exportVideos() {
             try {
-                const response = await axios.get('/api/videos/export', {
+                const format = await this.selectExportFormat();
+                if (!format) return;
+                
+                const response = await axios.get(`/api/videos/export?format=${format}`, {
                     responseType: 'blob'
                 });
                 
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
                 link.href = url;
-                link.setAttribute('download', `videos_${new Date().toISOString().split('T')[0]}.csv`);
+                
+                const extensions = {
+                    'csv': 'csv',
+                    'json': 'json',
+                    'excel': 'xlsx'
+                };
+                
+                link.setAttribute('download', `youtube_analysis_${new Date().toISOString().split('T')[0]}.${extensions[format]}`);
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -368,6 +427,17 @@ async loadVideos() {
                     message: 'Не удалось экспортировать данные'
                 });
             }
+        },
+        
+        async selectExportFormat() {
+            // Простой диалог выбора формата
+            const format = prompt('Выберите формат экспорта:\n1. Excel (рекомендуется)\n2. CSV\n3. JSON\n\nВведите номер (1-3):');
+            const formats = {
+                '1': 'excel',
+                '2': 'csv',
+                '3': 'json'
+            };
+            return formats[format] || null;
         },
         
         resetFilters() {
@@ -489,8 +559,13 @@ async loadVideos() {
         updateTask(updatedTask) {
             const index = this.tasks.findIndex(t => t.id === updatedTask.id);
             if (index !== -1) {
-                this.tasks[index] = updatedTask;
+                // Обновляем существующую задачу
+                Object.assign(this.tasks[index], updatedTask);
+            } else {
+                // Добавляем новую задачу
+                this.tasks.unshift(updatedTask);
             }
+            this.updateBadges();
         },
         
         // Settings
@@ -632,6 +707,31 @@ async loadVideos() {
                     }
                 });
             }
+        },
+        
+        // Helpers
+        formatDuration(duration) {
+            if (!duration) return '-';
+            // Преобразование ISO 8601 в читаемый формат
+            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (!match) return duration;
+            
+            const hours = match[1] || 0;
+            const minutes = match[2] || 0;
+            const seconds = match[3] || 0;
+            
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+            return `${minutes}:${String(seconds).padStart(2, '0')}`;
+        },
+        
+        getEngagementClass(rate) {
+            if (rate >= 10) return 'text-green-600 font-bold';
+            if (rate >= 5) return 'text-green-600';
+            if (rate >= 2) return 'text-yellow-600';
+            if (rate >= 1) return 'text-orange-600';
+            return 'text-red-600';
         },
         
         // UI Helpers

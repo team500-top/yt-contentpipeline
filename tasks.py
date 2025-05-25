@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 import json
 import logging
 from dotenv import load_dotenv
+import requests
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -78,7 +79,7 @@ class PausableTask(Task):
 
 # Вспомогательные функции
 def update_task_progress(task_id: int, progress: float, processed: int, total: int, status: str = "running"):
-    """Обновление прогресса задачи в БД"""
+    """Обновление прогресса задачи в БД и через WebSocket"""
     session = next(get_sync_session())
     try:
         task = session.query(TaskModel).filter_by(id=task_id).first()
@@ -93,6 +94,29 @@ def update_task_progress(task_id: int, progress: float, processed: int, total: i
                 task.completed_at = datetime.now()
             session.commit()
             logger.info(f"Task {task_id} progress: {progress:.1f}% ({processed}/{total})")
+            
+            # Отправка WebSocket уведомления
+            try:
+                websocket_data = {
+                    "type": "task_update",
+                    "task": {
+                        "id": task.id,
+                        "task_id": task.task_id,
+                        "progress": progress,
+                        "processed_items": processed,
+                        "total_items": total,
+                        "status": status,
+                        "parameters": task.parameters
+                    }
+                }
+                # Отправляем через HTTP в FastAPI endpoint
+                requests.post(
+                    "http://127.0.0.1:8000/api/internal/websocket",
+                    json=websocket_data,
+                    timeout=1
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send WebSocket update: {e}")
     finally:
         session.close()
 
@@ -143,6 +167,31 @@ def get_or_create_video(session, video_data: Dict[str, Any]) -> Optional[Video]:
     session.add(video)
     session.commit()
     logger.info(f"New video added: {video.title}")
+    
+    # Отправка WebSocket уведомления о новом видео
+    try:
+        websocket_data = {
+            "type": "video_added",
+            "video": {
+                "id": video.id,
+                "title": video.title,
+                "channel_name": video.channel_url.split("/")[-1] if video.channel_url else "Unknown",
+                "views": video.views,
+                "likes": video.likes,
+                "engagement_rate": round(video.engagement_rate, 2),
+                "is_short": video.is_short,
+                "has_cc": video.has_cc,
+                "thumbnail_url": video.thumbnail_url
+            }
+        }
+        requests.post(
+            "http://127.0.0.1:8000/api/internal/websocket",
+            json=websocket_data,
+            timeout=1
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send WebSocket notification: {e}")
+    
     return video
 
 # Основные задачи

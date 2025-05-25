@@ -3,6 +3,9 @@ from typing import List, Dict, Any, Optional
 import json
 import asyncio
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ConnectionManager:
     """Менеджер WebSocket соединений"""
@@ -18,28 +21,38 @@ class ConnectionManager:
             {"type": "connection", "message": "Connected to YouTube Analyzer"},
             websocket
         )
+        logger.info(f"WebSocket client connected. Total connections: {len(self.active_connections)}")
     
     def disconnect(self, websocket: WebSocket):
         """Отключение клиента"""
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+        logger.info(f"WebSocket client disconnected. Total connections: {len(self.active_connections)}")
     
     async def send_personal_message(self, message: Dict[str, Any], websocket: WebSocket):
         """Отправка сообщения конкретному клиенту"""
-        await websocket.send_json(message)
+        try:
+            await websocket.send_json(message)
+        except Exception as e:
+            logger.error(f"Error sending personal message: {e}")
     
     async def broadcast(self, message: Dict[str, Any]):
         """Широковещательная рассылка всем подключенным клиентам"""
+        if not self.active_connections:
+            logger.warning("No active WebSocket connections to broadcast to")
+            return
+            
         disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
+            except Exception as e:
+                logger.error(f"Error broadcasting to connection: {e}")
                 disconnected.append(connection)
         
         # Удаление отключенных соединений
         for conn in disconnected:
-            if conn in self.active_connections:
-                self.active_connections.remove(conn)
+            self.disconnect(conn)
 
 # Глобальный менеджер соединений
 manager = ConnectionManager()
@@ -79,7 +92,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
 
 # Вспомогательные функции для отправки обновлений
