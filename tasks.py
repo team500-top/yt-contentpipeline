@@ -115,7 +115,15 @@ def get_or_create_video(session, video_data: Dict[str, Any]) -> Optional[Video]:
     
     if existing:
         logger.info(f"Video already exists: {video_data['title']}")
-        return None
+        # Обновляем некоторые поля, которые могут измениться
+        existing.views = video_data.get("views", existing.views)
+        existing.likes = video_data.get("likes", existing.likes)
+        existing.comments = video_data.get("comments", existing.comments)
+        existing.engagement_rate = video_data.get("engagement_rate", existing.engagement_rate)
+        existing.like_ratio = video_data.get("like_ratio", existing.like_ratio)
+        existing.comment_ratio = video_data.get("comment_ratio", existing.comment_ratio)
+        session.commit()
+        return existing
     
     video = Video(
         video_url=video_data["video_url"],
@@ -136,7 +144,11 @@ def get_or_create_video(session, video_data: Dict[str, Any]) -> Optional[Video]:
         thumbnail_url=video_data.get("thumbnail_url", ""),
         video_category=video_data.get("video_category"),
         video_quality=video_data.get("video_quality", "hd"),
-        has_cc=video_data.get("has_captions", False),
+        has_cc=video_data.get("has_captions", False) or video_data.get("has_cc", False),
+        subtitles=video_data.get("subtitles", ""),
+        keywords=video_data.get("tags", []),
+        has_chapters=video_data.get("has_chapters", False),
+        emoji_in_title=video_data.get("emoji_in_title", False),
         parse_status="completed"
     )
     
@@ -145,10 +157,54 @@ def get_or_create_video(session, video_data: Dict[str, Any]) -> Optional[Video]:
     logger.info(f"New video added: {video.title}")
     return video
 
+def analyze_video_sync(video: Video, session) -> Dict[str, Any]:
+    """Синхронная версия анализа видео для использования в Celery"""
+    analyzer = VideoAnalyzer()
+    
+    # Создаем новый event loop для async кода
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        analysis = loop.run_until_complete(
+            analyzer.analyze_video(video)
+        )
+        
+        # Сохранение результатов анализа
+        video.top_5_keywords = analysis.get("top_5_keywords", [])
+        video.improvement_recommendations = analysis.get("improvement_recommendations", "")
+        video.success_analysis = analysis.get("success_analysis", "")
+        video.content_strategy = analysis.get("content_strategy", "")
+        
+        # Дополнительные параметры из анализа
+        if "has_emoji" in analysis:
+            video.emoji_in_title = analysis.get("has_emoji", False)
+        
+        if "has_clickbait" in analysis:
+            video.has_branding = analysis.get("has_clickbait", False)
+        
+        if "has_timestamps" in analysis:
+            video.has_chapters = analysis.get("has_timestamps", False)
+        
+        if "links_count" in analysis:
+            video.links_in_description = analysis.get("links_count", 0)
+        
+        # Сохранение оценки потенциала
+        if "potential_score" in analysis:
+            video.potential_score = analysis["potential_score"].get("percentage", 0)
+        
+        session.commit()
+        logger.info(f"Analysis completed for video: {video.title}")
+        
+        return analysis
+        
+    finally:
+        loop.close()
+
 # Основные задачи
 @celery_app.task(bind=True, base=PausableTask, name="parse_youtube_search")
 def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
-    """Парсинг YouTube по поисковому запросу"""
+    """Парсинг YouTube по поисковому запросу с автоматическим анализом"""
     logger.info(f"Starting search task {task_id}: {search_params}")
     
     youtube = YouTubeClient()
@@ -163,6 +219,7 @@ def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
         max_results = search_params.get("maxResults", 50)
         video_type = search_params.get("videoType", "all")
         sort = search_params.get("sort", "relevance")
+        auto_analyze = search_params.get("filters", {}).get("autoAnalyze", True)
         
         # Создание нового event loop для async кода
         loop = asyncio.new_event_loop()
@@ -203,6 +260,7 @@ def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
             # Обработка каждого видео
             processed = 0
             failed = 0
+            analyzed = 0
             
             for i, video_data in enumerate(videos):
                 try:
@@ -220,6 +278,16 @@ def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
                     video = get_or_create_video(session, video_details)
                     if video:
                         processed += 1
+                        
+                        # Автоматический глубокий анализ
+                        if auto_analyze and not video.improvement_recommendations:
+                            try:
+                                logger.info(f"Running auto-analysis for video: {video.title}")
+                                analysis = analyze_video_sync(video, session)
+                                analyzed += 1
+                                logger.info(f"Auto-analysis completed. Potential score: {analysis.get('potential_score', {}).get('percentage', 0)}%")
+                            except Exception as e:
+                                logger.error(f"Auto-analysis failed for video {video.id}: {str(e)}")
                     
                     # Обновление прогресса
                     progress = ((i + 1) / total_videos) * 100
@@ -230,6 +298,7 @@ def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
                         "last_processed_index": i,
                         "processed": processed,
                         "failed": failed,
+                        "analyzed": analyzed,
                         "video_ids": [v["video_id"] for v in videos],
                         "search_params": search_params
                     })
@@ -253,6 +322,7 @@ def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
                 "status": "success",
                 "processed": processed,
                 "failed": failed,
+                "analyzed": analyzed,
                 "total": total_videos,
                 "query": query
             }
@@ -279,7 +349,7 @@ def parse_youtube_search(self, task_id: int, search_params: Dict[str, Any]):
 
 @celery_app.task(bind=True, base=PausableTask, name="parse_youtube_channel")
 def parse_youtube_channel(self, task_id: int, channel_params: Dict[str, Any]):
-    """Парсинг видео с YouTube канала"""
+    """Парсинг видео с YouTube канала с автоматическим анализом"""
     logger.info(f"Starting channel parse task {task_id}: {channel_params}")
     
     youtube = YouTubeClient()
@@ -291,6 +361,7 @@ def parse_youtube_channel(self, task_id: int, channel_params: Dict[str, Any]):
         channel_url = channel_params.get("query", "")
         max_results = channel_params.get("maxResults", 50)
         video_type = channel_params.get("videoType", "all")
+        auto_analyze = channel_params.get("filters", {}).get("autoAnalyze", True)
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -353,6 +424,7 @@ def parse_youtube_channel(self, task_id: int, channel_params: Dict[str, Any]):
             # Обработка видео
             processed = 0
             failed = 0
+            analyzed = 0
             
             for i, video_data in enumerate(videos):
                 try:
@@ -374,6 +446,16 @@ def parse_youtube_channel(self, task_id: int, channel_params: Dict[str, Any]):
                     video = get_or_create_video(session, video_details)
                     if video:
                         processed += 1
+                        
+                        # Автоматический глубокий анализ
+                        if auto_analyze and not video.improvement_recommendations:
+                            try:
+                                logger.info(f"Running auto-analysis for video: {video.title}")
+                                analysis = analyze_video_sync(video, session)
+                                analyzed += 1
+                                logger.info(f"Auto-analysis completed. Potential score: {analysis.get('potential_score', {}).get('percentage', 0)}%")
+                            except Exception as e:
+                                logger.error(f"Auto-analysis failed for video {video.id}: {str(e)}")
                     
                     # Обновление прогресса
                     progress = ((i + 1) / total_videos) * 100
@@ -384,6 +466,7 @@ def parse_youtube_channel(self, task_id: int, channel_params: Dict[str, Any]):
                         "last_processed_index": i,
                         "processed": processed,
                         "failed": failed,
+                        "analyzed": analyzed,
                         "video_ids": [v["video_id"] for v in videos],
                         "channel_params": channel_params,
                         "channel_id": channel_id
@@ -416,6 +499,7 @@ def parse_youtube_channel(self, task_id: int, channel_params: Dict[str, Any]):
                 "status": "success",
                 "processed": processed,
                 "failed": failed,
+                "analyzed": analyzed,
                 "total": total_videos,
                 "channel_id": channel_id,
                 "channel_name": channel.title if channel else "Unknown"
@@ -457,53 +541,20 @@ def analyze_video_content(self, task_id: int, video_id: int):
         
         logger.info(f"Analyzing video: {video.title}")
         
-        # Создание анализатора
-        analyzer = VideoAnalyzer()
-        
         # Запуск анализа
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        analysis = analyze_video_sync(video, session)
         
-        try:
-            analysis = loop.run_until_complete(
-                analyzer.analyze_video(video)
-            )
-            
-            # Сохранение результатов анализа
-            video.top_5_keywords = analysis.get("keywords", [])[:5]
-            video.improvement_recommendations = analysis.get("recommendations", "")
-            video.success_analysis = analysis.get("success_analysis", "")
-            video.content_strategy = analysis.get("strategy", "")
-            
-            # Дополнительные параметры из анализа
-            if "title_length" in analysis:
-                video.emoji_in_title = analysis.get("has_emoji", False)
-            
-            if "has_clickbait" in analysis:
-                video.has_branding = analysis.get("has_clickbait", False)
-            
-            if "has_timestamps" in analysis:
-                video.has_chapters = analysis.get("has_timestamps", False)
-            
-            if "links_count" in analysis:
-                video.links_in_description = analysis.get("links_count", 0)
-            
-            session.commit()
-            logger.info(f"Analysis completed for video: {video.title}")
-            
-            update_task_progress(task_id, 100, 1, 1, "completed")
-            
-            return {
-                "status": "success",
-                "video_id": video_id,
-                "title": video.title,
-                "keywords": video.top_5_keywords,
-                "recommendations": video.improvement_recommendations[:200] + "..." if len(video.improvement_recommendations) > 200 else video.improvement_recommendations
-            }
-            
-        finally:
-            loop.close()
-            
+        update_task_progress(task_id, 100, 1, 1, "completed")
+        
+        return {
+            "status": "success",
+            "video_id": video_id,
+            "title": video.title,
+            "keywords": video.top_5_keywords,
+            "potential_score": analysis.get("potential_score", {}).get("percentage", 0),
+            "recommendations": video.improvement_recommendations[:200] + "..." if len(video.improvement_recommendations) > 200 else video.improvement_recommendations
+        }
+        
     except Exception as e:
         logger.error(f"Analysis task {task_id} failed: {str(e)}")
         update_task_progress(task_id, 0, 0, 0, "failed")

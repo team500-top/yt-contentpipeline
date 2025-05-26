@@ -36,10 +36,40 @@ createApp({
             videos: [],
             selectedVideo: null,
             viewMode: 'table',
+            showFilters: false,
+            
+            // Расширенные фильтры для видео
             videoFilters: {
+                // Основные
                 search: '',
                 type: '',
-                sort: 'date'
+                category: '',
+                sort: 'date',
+                
+                // Метрики
+                viewsMin: null,
+                viewsMax: null,
+                engagementMin: null,
+                engagementMax: null,
+                dateFrom: '',
+                dateTo: '',
+                
+                // Контент
+                hasSubtitles: false,
+                hasChapters: false,
+                hasEmoji: false,
+                hasBranding: false,
+                hasPinnedComment: false,
+                hasIntro: false,
+                hasOutro: false,
+                hasAnalysis: false,
+                
+                // Канал
+                channelAvgViewsMin: null,
+                channelAvgViewsMax: null,
+                channelFrequencyMin: null,
+                channelFrequencyMax: null,
+                quality: ''
             },
             
             // Table scroll sync
@@ -120,27 +150,108 @@ createApp({
         filteredVideos() {
             let filtered = [...this.videos];
             
-            // Search filter
+            // Основные фильтры
             if (this.videoFilters.search) {
                 const search = this.videoFilters.search.toLowerCase();
                 filtered = filtered.filter(v => 
                     v.title.toLowerCase().includes(search) ||
-                    v.channel_name?.toLowerCase().includes(search)
+                    v.channel_name?.toLowerCase().includes(search) ||
+                    v.description?.toLowerCase().includes(search)
                 );
             }
             
-            // Type filter
+            // Тип видео
             if (this.videoFilters.type === 'shorts') {
                 filtered = filtered.filter(v => v.is_short);
             } else if (this.videoFilters.type === 'long') {
                 filtered = filtered.filter(v => !v.is_short);
             }
             
-            // Sorting
+            // Категория
+            if (this.videoFilters.category) {
+                filtered = filtered.filter(v => v.video_category === this.videoFilters.category);
+            }
+            
+            // Метрики - Просмотры
+            if (this.videoFilters.viewsMin !== null && this.videoFilters.viewsMin !== '') {
+                filtered = filtered.filter(v => v.views >= this.videoFilters.viewsMin);
+            }
+            if (this.videoFilters.viewsMax !== null && this.videoFilters.viewsMax !== '') {
+                filtered = filtered.filter(v => v.views <= this.videoFilters.viewsMax);
+            }
+            
+            // Метрики - Вовлеченность
+            if (this.videoFilters.engagementMin !== null && this.videoFilters.engagementMin !== '') {
+                filtered = filtered.filter(v => v.engagement_rate >= this.videoFilters.engagementMin);
+            }
+            if (this.videoFilters.engagementMax !== null && this.videoFilters.engagementMax !== '') {
+                filtered = filtered.filter(v => v.engagement_rate <= this.videoFilters.engagementMax);
+            }
+            
+            // Даты
+            if (this.videoFilters.dateFrom) {
+                const dateFrom = new Date(this.videoFilters.dateFrom);
+                filtered = filtered.filter(v => new Date(v.publish_date) >= dateFrom);
+            }
+            if (this.videoFilters.dateTo) {
+                const dateTo = new Date(this.videoFilters.dateTo);
+                filtered = filtered.filter(v => new Date(v.publish_date) <= dateTo);
+            }
+            
+            // Контент фильтры
+            if (this.videoFilters.hasSubtitles) {
+                filtered = filtered.filter(v => v.has_cc);
+            }
+            if (this.videoFilters.hasChapters) {
+                filtered = filtered.filter(v => v.has_chapters);
+            }
+            if (this.videoFilters.hasEmoji) {
+                filtered = filtered.filter(v => v.emoji_in_title);
+            }
+            if (this.videoFilters.hasBranding) {
+                filtered = filtered.filter(v => v.has_branding);
+            }
+            if (this.videoFilters.hasPinnedComment) {
+                filtered = filtered.filter(v => v.has_pinned_comment);
+            }
+            if (this.videoFilters.hasIntro) {
+                filtered = filtered.filter(v => v.has_intro);
+            }
+            if (this.videoFilters.hasOutro) {
+                filtered = filtered.filter(v => v.has_outro);
+            }
+            if (this.videoFilters.hasAnalysis) {
+                filtered = filtered.filter(v => v.improvement_recommendations && v.improvement_recommendations.length > 0);
+            }
+            
+            // Канал фильтры
+            if (this.videoFilters.channelAvgViewsMin !== null && this.videoFilters.channelAvgViewsMin !== '') {
+                filtered = filtered.filter(v => (v.channel_avg_views || 0) >= this.videoFilters.channelAvgViewsMin);
+            }
+            if (this.videoFilters.channelAvgViewsMax !== null && this.videoFilters.channelAvgViewsMax !== '') {
+                filtered = filtered.filter(v => (v.channel_avg_views || 0) <= this.videoFilters.channelAvgViewsMax);
+            }
+            if (this.videoFilters.channelFrequencyMin !== null && this.videoFilters.channelFrequencyMin !== '') {
+                filtered = filtered.filter(v => (v.channel_frequency || 0) >= this.videoFilters.channelFrequencyMin);
+            }
+            if (this.videoFilters.channelFrequencyMax !== null && this.videoFilters.channelFrequencyMax !== '') {
+                filtered = filtered.filter(v => (v.channel_frequency || 0) <= this.videoFilters.channelFrequencyMax);
+            }
+            
+            // Качество
+            if (this.videoFilters.quality) {
+                filtered = filtered.filter(v => v.video_quality === this.videoFilters.quality);
+            }
+            
+            // Сортировка
             filtered.sort((a, b) => {
                 switch (this.videoFilters.sort) {
                     case 'views':
                         return b.views - a.views;
+                    case 'likes':
+                        return b.likes - a.likes;
+                    case 'comments':
+                        return b.comments - a.comments;
                     case 'engagement':
                         return b.engagement_rate - a.engagement_rate;
                     case 'date':
@@ -150,6 +261,33 @@ createApp({
             });
             
             return filtered;
+        },
+        
+        // Количество активных фильтров
+        activeFiltersCount() {
+            let count = 0;
+            const filters = this.videoFilters;
+            
+            if (filters.search) count++;
+            if (filters.type) count++;
+            if (filters.category) count++;
+            if (filters.viewsMin || filters.viewsMax) count++;
+            if (filters.engagementMin || filters.engagementMax) count++;
+            if (filters.dateFrom || filters.dateTo) count++;
+            if (filters.quality) count++;
+            if (filters.channelAvgViewsMin || filters.channelAvgViewsMax) count++;
+            if (filters.channelFrequencyMin || filters.channelFrequencyMax) count++;
+            
+            // Boolean filters
+            const booleanFilters = [
+                'hasSubtitles', 'hasChapters', 'hasEmoji', 'hasBranding',
+                'hasPinnedComment', 'hasIntro', 'hasOutro', 'hasAnalysis'
+            ];
+            booleanFilters.forEach(filter => {
+                if (filters[filter]) count++;
+            });
+            
+            return count;
         },
         
         // Computed properties for tasks
@@ -385,64 +523,118 @@ createApp({
             this.selectedVideo = video;
         },
         
-        async analyzeVideo(video) {
-            try {
-                const response = await axios.post(`/api/videos/${video.id}/analyze`);
-                this.showNotification({
-                    type: 'success',
-                    title: 'Анализ запущен',
-                    message: 'Результаты будут доступны через несколько минут'
-                });
-                this.selectedVideo = null;
-            } catch (error) {
-                this.showNotification({
-                    type: 'error',
-                    title: 'Ошибка',
-                    message: 'Не удалось запустить анализ'
-                });
-            }
-        },
-        
+        // Исправленный экспорт видео
         async exportVideos(format = 'excel') {
             try {
-                const response = await axios.get(`/api/videos/export?format=${format}`, {
+                // Получаем отфильтрованные видео
+                const videosToExport = this.filteredVideos;
+                
+                if (videosToExport.length === 0) {
+                    this.showNotification({
+                        type: 'warning',
+                        title: 'Нет данных',
+                        message: 'Нет видео для экспорта с текущими фильтрами'
+                    });
+                    return;
+                }
+                
+                // Формируем параметры запроса с ID отфильтрованных видео
+                const videoIds = videosToExport.map(v => v.id).join(',');
+                const url = `/api/videos/export?format=${format}&ids=${videoIds}`;
+                
+                const response = await axios.get(url, {
                     responseType: 'blob'
                 });
                 
-                const contentType = response.headers['content-type'];
+                // Определяем расширение файла
                 let extension = 'xlsx';
-                if (contentType.includes('csv')) extension = 'csv';
-                else if (contentType.includes('json')) extension = 'json';
+                if (format === 'csv') extension = 'csv';
+                else if (format === 'json') extension = 'json';
                 
-                const url = window.URL.createObjectURL(new Blob([response.data]));
+                // Создаем ссылку для скачивания
+                const blob = new Blob([response.data]);
+                const downloadUrl = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', `youtube_analysis_${new Date().toISOString().split('T')[0]}.${extension}`);
+                link.href = downloadUrl;
+                
+                // Имя файла с датой и количеством записей
+                const date = new Date().toISOString().split('T')[0];
+                const filename = `youtube_analysis_${date}_${videosToExport.length}_videos.${extension}`;
+                link.setAttribute('download', filename);
+                
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
                 
+                // Освобождаем память
+                window.URL.revokeObjectURL(downloadUrl);
+                
                 this.showNotification({
                     type: 'success',
                     title: 'Экспорт завершен',
-                    message: `Файл загружен в формате ${format.toUpperCase()}`
+                    message: `Экспортировано ${videosToExport.length} видео в формате ${format.toUpperCase()}`
                 });
             } catch (error) {
                 console.error('Export error:', error);
                 this.showNotification({
                     type: 'error',
-                    title: 'Ошибка',
-                    message: 'Не удалось экспортировать данные'
+                    title: 'Ошибка экспорта',
+                    message: 'Не удалось экспортировать данные. Проверьте консоль для деталей.'
                 });
             }
         },
         
-        resetFilters() {
+        // Фильтры
+        toggleFilters() {
+            this.showFilters = !this.showFilters;
+        },
+        
+        applyFilters() {
+            // Фильтры применяются автоматически через computed property
+            this.showNotification({
+                type: 'success',
+                title: 'Фильтры применены',
+                message: `Найдено ${this.filteredVideos.length} видео`
+            });
+        },
+        
+        resetAllFilters() {
             this.videoFilters = {
                 search: '',
                 type: '',
-                sort: 'date'
+                category: '',
+                sort: 'date',
+                viewsMin: null,
+                viewsMax: null,
+                engagementMin: null,
+                engagementMax: null,
+                dateFrom: '',
+                dateTo: '',
+                hasSubtitles: false,
+                hasChapters: false,
+                hasEmoji: false,
+                hasBranding: false,
+                hasPinnedComment: false,
+                hasIntro: false,
+                hasOutro: false,
+                hasAnalysis: false,
+                channelAvgViewsMin: null,
+                channelAvgViewsMax: null,
+                channelFrequencyMin: null,
+                channelFrequencyMax: null,
+                quality: ''
             };
+            
+            this.showNotification({
+                type: 'info',
+                title: 'Фильтры сброшены',
+                message: 'Все фильтры удалены'
+            });
+        },
+        
+        resetFilters() {
+            // Старый метод для совместимости
+            this.resetAllFilters();
         },
         
         // Table scroll sync

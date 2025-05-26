@@ -67,6 +67,12 @@
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 2;
         }
+        
+        /* Filter panel */
+        .filter-panel {
+            max-height: 600px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="h-full bg-gray-50">
@@ -253,6 +259,13 @@
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-2xl font-bold text-gray-900">Видео</h2>
                             <div class="flex items-center space-x-4">
+                                <button @click="toggleFilters" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                                    </svg>
+                                    Фильтры
+                                    <span v-if="activeFiltersCount > 0" class="ml-2 px-2 py-0.5 text-xs bg-white text-gray-700 rounded-full">{{ activeFiltersCount }}</span>
+                                </button>
                                 <button @click="viewMode = 'table'" :class="['p-2 rounded', viewMode === 'table' ? 'bg-gray-200' : 'hover:bg-gray-100']">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -285,30 +298,223 @@
                             </div>
                         </div>
 
-                        <!-- Filters -->
-                        <div class="bg-white rounded-lg shadow p-4 mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <input
-                                    v-model="videoFilters.search"
-                                    type="text"
-                                    placeholder="Поиск по названию..."
-                                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                >
-                                <select v-model="videoFilters.type" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-                                    <option value="">Все типы</option>
-                                    <option value="shorts">Shorts</option>
-                                    <option value="long">Длинные</option>
-                                </select>
-                                <select v-model="videoFilters.sort" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-                                    <option value="date">По дате</option>
-                                    <option value="views">По просмотрам</option>
-                                    <option value="engagement">По вовлеченности</option>
-                                </select>
-                                <button @click="resetFilters" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
-                                    Сбросить
-                                </button>
+                        <!-- Advanced Filters Panel -->
+                        <transition name="fade">
+                            <div v-if="showFilters" class="bg-white rounded-lg shadow p-6 mb-6 filter-panel">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-medium text-gray-900">Расширенные фильтры</h3>
+                                    <button @click="resetAllFilters" class="text-sm text-red-600 hover:text-red-700">Сбросить все</button>
+                                </div>
+                                
+                                <!-- Filter Groups -->
+                                <div class="space-y-6">
+                                    <!-- Basic Filters -->
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-700 mb-3">Основные параметры</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Поиск</label>
+                                                <input
+                                                    v-model="videoFilters.search"
+                                                    type="text"
+                                                    placeholder="Название или канал..."
+                                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                >
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Тип видео</label>
+                                                <select v-model="videoFilters.type" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                    <option value="">Все типы</option>
+                                                    <option value="shorts">Shorts</option>
+                                                    <option value="long">Длинные</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Категория</label>
+                                                <select v-model="videoFilters.category" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                    <option value="">Все категории</option>
+                                                    <option value="10">Музыка</option>
+                                                    <option value="20">Игры</option>
+                                                    <option value="22">Люди и блоги</option>
+                                                    <option value="24">Развлечения</option>
+                                                    <option value="25">Новости</option>
+                                                    <option value="26">Хобби</option>
+                                                    <option value="27">Образование</option>
+                                                    <option value="28">Наука</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Сортировка</label>
+                                                <select v-model="videoFilters.sort" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                    <option value="date">По дате</option>
+                                                    <option value="views">По просмотрам</option>
+                                                    <option value="likes">По лайкам</option>
+                                                    <option value="comments">По комментариям</option>
+                                                    <option value="engagement">По вовлеченности</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Metrics Filters -->
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-700 mb-3">Метрики</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Просмотры</label>
+                                                <div class="flex gap-2">
+                                                    <input
+                                                        v-model.number="videoFilters.viewsMin"
+                                                        type="number"
+                                                        placeholder="Мин"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                    <input
+                                                        v-model.number="videoFilters.viewsMax"
+                                                        type="number"
+                                                        placeholder="Макс"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Вовлеченность %</label>
+                                                <div class="flex gap-2">
+                                                    <input
+                                                        v-model.number="videoFilters.engagementMin"
+                                                        type="number"
+                                                        step="0.1"
+                                                        placeholder="Мин"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                    <input
+                                                        v-model.number="videoFilters.engagementMax"
+                                                        type="number"
+                                                        step="0.1"
+                                                        placeholder="Макс"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Дата публикации</label>
+                                                <div class="flex gap-2">
+                                                    <input
+                                                        v-model="videoFilters.dateFrom"
+                                                        type="date"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                    <input
+                                                        v-model="videoFilters.dateTo"
+                                                        type="date"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Content Filters -->
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-700 mb-3">Параметры контента</h4>
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasSubtitles" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Есть субтитры</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasChapters" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Есть главы</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasEmoji" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Эмодзи в заголовке</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasBranding" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Есть реклама</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasPinnedComment" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Закрепленный комментарий</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasIntro" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Есть интро</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasOutro" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Есть аутро</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input v-model="videoFilters.hasAnalysis" type="checkbox" class="mr-2">
+                                                <span class="text-sm">Есть анализ</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Channel Filters -->
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-700 mb-3">Параметры канала</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Средние просмотры канала</label>
+                                                <div class="flex gap-2">
+                                                    <input
+                                                        v-model.number="videoFilters.channelAvgViewsMin"
+                                                        type="number"
+                                                        placeholder="Мин"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                    <input
+                                                        v-model.number="videoFilters.channelAvgViewsMax"
+                                                        type="number"
+                                                        placeholder="Макс"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Частота публикаций (дней)</label>
+                                                <div class="flex gap-2">
+                                                    <input
+                                                        v-model.number="videoFilters.channelFrequencyMin"
+                                                        type="number"
+                                                        placeholder="Мин"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                    <input
+                                                        v-model.number="videoFilters.channelFrequencyMax"
+                                                        type="number"
+                                                        placeholder="Макс"
+                                                        class="w-1/2 px-2 py-1 text-sm border border-gray-300 rounded-md"
+                                                    >
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-600 mb-1">Качество видео</label>
+                                                <select v-model="videoFilters.quality" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                    <option value="">Любое</option>
+                                                    <option value="sd">SD</option>
+                                                    <option value="hd">HD (720p)</option>
+                                                    <option value="1080p">Full HD (1080p)</option>
+                                                    <option value="4k">4K</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 flex justify-end gap-4">
+                                    <button @click="applyFilters" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                                        Применить фильтры
+                                    </button>
+                                    <button @click="showFilters = false" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+                                        Закрыть
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        </transition>
 
                         <!-- Videos Table View with Double Scroll -->
                         <div v-if="viewMode === 'table'" class="bg-white rounded-lg shadow overflow-hidden">
@@ -410,11 +616,8 @@
                                                     {{ video.video_quality || 'HD' }}
                                                 </td>
                                                 <td class="px-4 py-4 whitespace-nowrap text-sm">
-                                                    <button @click="viewVideo(video)" class="text-blue-600 hover:text-blue-900 mr-2">
+                                                    <button @click="viewVideo(video)" class="text-blue-600 hover:text-blue-900">
                                                         Детали
-                                                    </button>
-                                                    <button @click="analyzeVideo(video)" class="text-green-600 hover:text-green-900">
-                                                        Анализ
                                                     </button>
                                                 </td>
                                             </tr>
@@ -823,6 +1026,10 @@
                                         <h3 class="font-medium text-gray-900">Описание</h3>
                                         <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ selectedVideo.description || 'Нет описания' }}</p>
                                     </div>
+                                    <div v-if="selectedVideo.subtitles">
+                                        <h3 class="font-medium text-gray-900">Транскрипт</h3>
+                                        <p class="text-sm text-gray-600 whitespace-pre-wrap max-h-40 overflow-y-auto">{{ selectedVideo.subtitles }}</p>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -868,13 +1075,15 @@
                                     <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedVideo.success_analysis }}</p>
                                 </div>
                                 
+                                <div v-if="selectedVideo.content_strategy" class="bg-purple-50 rounded-lg p-4">
+                                    <h3 class="font-medium text-gray-900 mb-2">Стратегия контента</h3>
+                                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedVideo.content_strategy }}</p>
+                                </div>
+                                
                                 <div class="flex space-x-3">
                                     <a :href="selectedVideo.video_url" target="_blank" class="flex-1 px-4 py-2 bg-red-600 text-white text-center rounded-md hover:bg-red-700">
                                         Смотреть на YouTube
                                     </a>
-                                    <button @click="analyzeVideo(selectedVideo)" class="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
-                                        Глубокий анализ
-                                    </button>
                                 </div>
                             </div>
                         </div>

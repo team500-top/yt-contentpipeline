@@ -86,6 +86,7 @@ async def get_videos(
                     "id": video.id,
                     "video_url": video.video_url,
                     "title": video.title,
+                    "description": video.description,
                     "channel_url": video.channel_url,
                     "channel_name": video.channel_url.split("/")[-1] if video.channel_url else "Unknown",
                     "views": video.views,
@@ -104,6 +105,8 @@ async def get_videos(
                     "has_cc": video.has_cc,
                     "has_chapters": video.has_chapters,
                     "has_branding": video.has_branding,
+                    "has_intro": video.has_intro,
+                    "has_outro": video.has_outro,
                     "emoji_in_title": video.emoji_in_title,
                     "top_5_keywords": video.top_5_keywords or [],
                     "links_in_description": video.links_in_description or 0,
@@ -111,7 +114,13 @@ async def get_videos(
                     "speech_speed": video.speech_speed,
                     "improvement_recommendations": video.improvement_recommendations,
                     "success_analysis": video.success_analysis,
-                    "content_strategy": video.content_strategy
+                    "content_strategy": video.content_strategy,
+                    "channel_avg_views": video.channel_avg_views,
+                    "channel_avg_likes": video.channel_avg_likes,
+                    "channel_frequency": video.channel_frequency,
+                    "channel_age": video.channel_age,
+                    "subtitles": video.subtitles,
+                    "keywords": video.keywords
                 }
                 for video in videos
             ],
@@ -230,27 +239,45 @@ async def analyze_video(video_id: int):
         
         return {"task_id": task.id, "status": "started", "celery_id": celery_task.id}
 
-# ИСПРАВЛЕННЫЙ ЭКСПОРТ
+# ИСПРАВЛЕННЫЙ ЭКСПОРТ с поддержкой фильтрации
 @api_router.get("/videos/export")
-async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")):
-    """Экспорт видео в CSV, JSON или Excel"""
+async def export_videos(
+    format: str = Query("excel", regex="^(csv|json|excel)$"),
+    ids: Optional[str] = None
+):
+    """Экспорт видео в CSV, JSON или Excel с поддержкой фильтрации"""
     async with get_session() as session:
-        stmt = select(Video).where(Video.parse_status == "completed").order_by(desc(Video.views))
+        # Базовый запрос
+        stmt = select(Video).where(Video.parse_status == "completed")
+        
+        # Если переданы конкретные ID видео (от фильтров)
+        if ids:
+            video_ids = [int(id) for id in ids.split(',') if id.isdigit()]
+            if video_ids:
+                stmt = stmt.where(Video.id.in_(video_ids))
+        
+        # Сортировка по просмотрам
+        stmt = stmt.order_by(desc(Video.views))
+        
         result = await session.execute(stmt)
         videos = result.scalars().all()
+        
+        if not videos:
+            raise HTTPException(status_code=404, detail="Нет данных для экспорта")
         
         if format == "csv":
             output = io.StringIO()
             writer = csv.DictWriter(output, fieldnames=[
-                "video_url", "channel_url", "title", "is_short", "views", "likes", "comments", "dislikes",
-                "like_ratio", "comment_ratio", "engagement_rate", "publish_date", 
-                "duration", "video_category", "video_quality", "has_cc", "has_chapters", 
-                "has_branding", "has_intro", "has_outro", "emoji_in_title", "top_5_keywords", 
-                "links_in_description", "links_in_channel_description", "has_pinned_comment",
-                "contacts_in_video", "contacts_in_channel", "speech_speed",
-                "channel_avg_views", "channel_avg_likes", "channel_frequency", "channel_age",
-                "average_view_duration", "click_through_rate",
-                "improvement_recommendations", "success_analysis", "content_strategy"
+                "video_url", "channel_url", "title", "description", "is_short", "views", "likes", 
+                "comments", "dislikes", "like_ratio", "comment_ratio", "engagement_rate", 
+                "publish_date", "duration", "video_category", "video_quality", "has_cc", 
+                "has_chapters", "has_branding", "has_intro", "has_outro", "emoji_in_title", 
+                "top_5_keywords", "links_in_description", "links_in_channel_description", 
+                "has_pinned_comment", "contacts_in_video", "contacts_in_channel", 
+                "speech_speed", "channel_avg_views", "channel_avg_likes", "channel_frequency", 
+                "channel_age", "average_view_duration", "click_through_rate",
+                "improvement_recommendations", "success_analysis", "content_strategy",
+                "subtitles", "keywords"
             ])
             writer.writeheader()
             
@@ -259,6 +286,7 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                     "video_url": video.video_url,
                     "channel_url": video.channel_url,
                     "title": video.title,
+                    "description": video.description or "",
                     "is_short": "Да" if video.is_short else "Нет",
                     "views": video.views,
                     "likes": video.likes,
@@ -267,7 +295,7 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                     "like_ratio": f"{video.like_ratio:.2f}%",
                     "comment_ratio": f"{video.comment_ratio:.2f}%",
                     "engagement_rate": f"{video.engagement_rate:.2f}%",
-                    "publish_date": video.publish_date.strftime("%Y-%m-%d") if video.publish_date else "",
+                    "publish_date": video.publish_date.strftime("%Y-%m-%d %H:%M:%S") if video.publish_date else "",
                     "duration": video.duration or "",
                     "video_category": video.video_category or "",
                     "video_quality": video.video_quality or "",
@@ -292,14 +320,19 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                     "click_through_rate": video.click_through_rate or 0,
                     "improvement_recommendations": video.improvement_recommendations or "",
                     "success_analysis": video.success_analysis or "",
-                    "content_strategy": video.content_strategy or ""
+                    "content_strategy": video.content_strategy or "",
+                    "subtitles": video.subtitles or "",
+                    "keywords": json.dumps(video.keywords or [], ensure_ascii=False)
                 })
             
             output.seek(0)
             return StreamingResponse(
                 io.BytesIO(output.getvalue().encode('utf-8-sig')),
-                media_type="text/csv",
-                headers={"Content-Disposition": f"attachment; filename=youtube_videos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"}
+                media_type="text/csv; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename=youtube_videos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    "Content-Type": "text/csv; charset=utf-8"
+                }
             )
             
         elif format == "json":
@@ -308,6 +341,7 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                 data.append({
                     "video_url": video.video_url,
                     "title": video.title,
+                    "description": video.description,
                     "channel_url": video.channel_url,
                     "is_short": video.is_short,
                     "metrics": {
@@ -325,7 +359,9 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                         "quality": video.video_quality,
                         "has_cc": video.has_cc,
                         "has_chapters": video.has_chapters,
-                        "keywords": video.top_5_keywords
+                        "keywords": video.keywords,
+                        "top_5_keywords": video.top_5_keywords,
+                        "subtitles": video.subtitles
                     },
                     "channel_stats": {
                         "avg_views": video.channel_avg_views,
@@ -337,27 +373,39 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                         "recommendations": video.improvement_recommendations,
                         "success_factors": video.success_analysis,
                         "strategy": video.content_strategy
-                    }
+                    },
+                    "publish_date": video.publish_date.isoformat() if video.publish_date else None,
+                    "created_at": video.created_at.isoformat() if video.created_at else None
                 })
             
-            return JSONResponse(content=data)
+            # Возвращаем JSON как файл для скачивания
+            json_str = json.dumps(data, ensure_ascii=False, indent=2)
+            return StreamingResponse(
+                io.BytesIO(json_str.encode('utf-8')),
+                media_type="application/json; charset=utf-8",
+                headers={
+                    "Content-Disposition": f"attachment; filename=youtube_videos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    "Content-Type": "application/json; charset=utf-8"
+                }
+            )
             
         else:  # Excel
             wb = Workbook()
             ws = wb.active
             ws.title = "YouTube Видео"
             
-            # Заголовки - ВСЕ 42 параметра
+            # Заголовки - ВСЕ 42+ параметра
             headers = [
-                "URL видео", "URL канала", "Название", "Тип видео", "Просмотры", "Лайки", 
-                "Комментарии", "Дизлайки", "% лайков", "% комментариев", "Вовлеченность %",
-                "Дата публикации", "Длительность", "Категория", "Качество", "Субтитры",
-                "Главы", "Брендинг", "Интро", "Аутро", "Эмодзи в заголовке",
-                "Топ-5 ключевых слов", "Ссылок в описании", "Ссылок в канале",
-                "Закрепленный комментарий", "Контакты в видео", "Контакты в канале",
-                "Скорость речи", "Средние просмотры канала", "Средние лайки канала",
-                "Частота публикаций", "Возраст канала", "Средняя длительность просмотра",
-                "CTR", "Рекомендации", "Анализ успеха", "Стратегия"
+                "URL видео", "URL канала", "Название", "Описание", "Тип видео", "Просмотры", 
+                "Лайки", "Комментарии", "Дизлайки", "% лайков", "% комментариев", 
+                "Вовлеченность %", "Дата публикации", "Длительность", "Категория", 
+                "Качество", "Субтитры", "Главы", "Брендинг", "Интро", "Аутро", 
+                "Эмодзи в заголовке", "Топ-5 ключевых слов", "Ссылок в описании", 
+                "Ссылок в канале", "Закрепленный комментарий", "Контакты в видео", 
+                "Контакты в канале", "Скорость речи", "Средние просмотры канала", 
+                "Средние лайки канала", "Частота публикаций", "Возраст канала", 
+                "Средняя длительность просмотра", "CTR", "Рекомендации", 
+                "Анализ успеха", "Стратегия", "Транскрипт", "Ключевые слова"
             ]
             
             # Стили для заголовков
@@ -376,40 +424,43 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
                 ws.cell(row=row, column=1, value=video.video_url)
                 ws.cell(row=row, column=2, value=video.channel_url)
                 ws.cell(row=row, column=3, value=video.title)
-                ws.cell(row=row, column=4, value="Short" if video.is_short else "Обычное")
-                ws.cell(row=row, column=5, value=video.views)
-                ws.cell(row=row, column=6, value=video.likes)
-                ws.cell(row=row, column=7, value=video.comments)
-                ws.cell(row=row, column=8, value=video.dislikes or 0)
-                ws.cell(row=row, column=9, value=f"{video.like_ratio:.2f}%")
-                ws.cell(row=row, column=10, value=f"{video.comment_ratio:.2f}%")
-                ws.cell(row=row, column=11, value=f"{video.engagement_rate:.2f}%")
-                ws.cell(row=row, column=12, value=video.publish_date.strftime("%Y-%m-%d") if video.publish_date else "")
-                ws.cell(row=row, column=13, value=video.duration or "")
-                ws.cell(row=row, column=14, value=video.video_category or "")
-                ws.cell(row=row, column=15, value=video.video_quality or "")
-                ws.cell(row=row, column=16, value="Да" if video.has_cc else "Нет")
-                ws.cell(row=row, column=17, value="Да" if video.has_chapters else "Нет")
-                ws.cell(row=row, column=18, value="Да" if video.has_branding else "Нет")
-                ws.cell(row=row, column=19, value="Да" if video.has_intro else "Нет")
-                ws.cell(row=row, column=20, value="Да" if video.has_outro else "Нет")
-                ws.cell(row=row, column=21, value="Да" if video.emoji_in_title else "Нет")
-                ws.cell(row=row, column=22, value=", ".join(video.top_5_keywords or []))
-                ws.cell(row=row, column=23, value=video.links_in_description or 0)
-                ws.cell(row=row, column=24, value=video.links_in_channel_description or 0)
-                ws.cell(row=row, column=25, value="Да" if video.has_pinned_comment else "Нет")
-                ws.cell(row=row, column=26, value=json.dumps(video.contacts_in_video or [], ensure_ascii=False))
-                ws.cell(row=row, column=27, value=json.dumps(video.contacts_in_channel or [], ensure_ascii=False))
-                ws.cell(row=row, column=28, value=video.speech_speed or 0)
-                ws.cell(row=row, column=29, value=video.channel_avg_views or 0)
-                ws.cell(row=row, column=30, value=video.channel_avg_likes or 0)
-                ws.cell(row=row, column=31, value=video.channel_frequency or 0)
-                ws.cell(row=row, column=32, value=video.channel_age or 0)
-                ws.cell(row=row, column=33, value=video.average_view_duration or 0)
-                ws.cell(row=row, column=34, value=video.click_through_rate or 0)
-                ws.cell(row=row, column=35, value=video.improvement_recommendations or "")
-                ws.cell(row=row, column=36, value=video.success_analysis or "")
-                ws.cell(row=row, column=37, value=video.content_strategy or "")
+                ws.cell(row=row, column=4, value=video.description or "")
+                ws.cell(row=row, column=5, value="Short" if video.is_short else "Обычное")
+                ws.cell(row=row, column=6, value=video.views)
+                ws.cell(row=row, column=7, value=video.likes)
+                ws.cell(row=row, column=8, value=video.comments)
+                ws.cell(row=row, column=9, value=video.dislikes or 0)
+                ws.cell(row=row, column=10, value=f"{video.like_ratio:.2f}%")
+                ws.cell(row=row, column=11, value=f"{video.comment_ratio:.2f}%")
+                ws.cell(row=row, column=12, value=f"{video.engagement_rate:.2f}%")
+                ws.cell(row=row, column=13, value=video.publish_date.strftime("%Y-%m-%d %H:%M:%S") if video.publish_date else "")
+                ws.cell(row=row, column=14, value=video.duration or "")
+                ws.cell(row=row, column=15, value=video.video_category or "")
+                ws.cell(row=row, column=16, value=video.video_quality or "")
+                ws.cell(row=row, column=17, value="Да" if video.has_cc else "Нет")
+                ws.cell(row=row, column=18, value="Да" if video.has_chapters else "Нет")
+                ws.cell(row=row, column=19, value="Да" if video.has_branding else "Нет")
+                ws.cell(row=row, column=20, value="Да" if video.has_intro else "Нет")
+                ws.cell(row=row, column=21, value="Да" if video.has_outro else "Нет")
+                ws.cell(row=row, column=22, value="Да" if video.emoji_in_title else "Нет")
+                ws.cell(row=row, column=23, value=", ".join(video.top_5_keywords or []))
+                ws.cell(row=row, column=24, value=video.links_in_description or 0)
+                ws.cell(row=row, column=25, value=video.links_in_channel_description or 0)
+                ws.cell(row=row, column=26, value="Да" if video.has_pinned_comment else "Нет")
+                ws.cell(row=row, column=27, value=json.dumps(video.contacts_in_video or [], ensure_ascii=False))
+                ws.cell(row=row, column=28, value=json.dumps(video.contacts_in_channel or [], ensure_ascii=False))
+                ws.cell(row=row, column=29, value=video.speech_speed or 0)
+                ws.cell(row=row, column=30, value=video.channel_avg_views or 0)
+                ws.cell(row=row, column=31, value=video.channel_avg_likes or 0)
+                ws.cell(row=row, column=32, value=video.channel_frequency or 0)
+                ws.cell(row=row, column=33, value=video.channel_age or 0)
+                ws.cell(row=row, column=34, value=video.average_view_duration or 0)
+                ws.cell(row=row, column=35, value=video.click_through_rate or 0)
+                ws.cell(row=row, column=36, value=video.improvement_recommendations or "")
+                ws.cell(row=row, column=37, value=video.success_analysis or "")
+                ws.cell(row=row, column=38, value=video.content_strategy or "")
+                ws.cell(row=row, column=39, value=video.subtitles[:500] + "..." if video.subtitles and len(video.subtitles) > 500 else video.subtitles or "")
+                ws.cell(row=row, column=40, value=json.dumps(video.keywords or [], ensure_ascii=False))
             
             # Автоширина колонок
             for column in ws.columns:
@@ -427,6 +478,15 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
             # Закрепление заголовка
             ws.freeze_panes = "A2"
             
+            # Добавляем второй лист со статистикой
+            ws2 = wb.create_sheet("Статистика")
+            ws2.append(["Параметр", "Значение"])
+            ws2.append(["Всего видео", len(videos)])
+            ws2.append(["Shorts", sum(1 for v in videos if v.is_short)])
+            ws2.append(["Обычные видео", sum(1 for v in videos if not v.is_short)])
+            ws2.append(["Средние просмотры", sum(v.views for v in videos) / len(videos) if videos else 0])
+            ws2.append(["Средняя вовлеченность", sum(v.engagement_rate for v in videos) / len(videos) if videos else 0])
+            
             # Сохранение в буфер
             excel_buffer = io.BytesIO()
             wb.save(excel_buffer)
@@ -435,7 +495,10 @@ async def export_videos(format: str = Query("excel", regex="^(csv|json|excel)$")
             return StreamingResponse(
                 excel_buffer,
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                headers={"Content-Disposition": f"attachment; filename=youtube_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"}
+                headers={
+                    "Content-Disposition": f"attachment; filename=youtube_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                }
             )
 
 # ==================== Parsing API ====================
@@ -461,7 +524,8 @@ async def start_parsing(request_data: Dict[str, Any]):
         "videoCaption": request_data.get("videoCaption"),  # closedCaption, none
         "videoLicense": request_data.get("videoLicense"),  # creativeCommon, youtube
         "regionCode": request_data.get("regionCode", "RU"),
-        "relevanceLanguage": request_data.get("relevanceLanguage", "ru")
+        "relevanceLanguage": request_data.get("relevanceLanguage", "ru"),
+        "autoAnalyze": request_data.get("autoAnalyze", True)  # Автоматический глубокий анализ
     }
     
     request_data["filters"] = filters
