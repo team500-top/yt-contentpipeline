@@ -26,6 +26,11 @@ from tasks import (
 )
 from websocket import notify_task_update, notify_video_added, send_notification
 
+# Импорт логгера
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Создание роутера
 api_router = APIRouter()
 
@@ -361,7 +366,8 @@ async def export_videos(
                         "has_chapters": video.has_chapters,
                         "keywords": video.keywords,
                         "top_5_keywords": video.top_5_keywords,
-                        "subtitles": video.subtitles
+                        "subtitles": video.subtitles,
+                        "links_in_description": video.links_in_description
                     },
                     "channel_stats": {
                         "avg_views": video.channel_avg_views,
@@ -496,549 +502,132 @@ async def export_videos(
                 excel_buffer,
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 headers={
-                    "Content-Disposition": f"attachment; filename=youtube_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    "Content-Disposition": f"attachment; filename=youtube_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                 }
             )
 
-# ==================== Parsing API ====================
+# ==================== Channels API ====================
 
-@api_router.post("/parse")
-async def start_parsing(request_data: Dict[str, Any]):
-    """Запуск парсинга YouTube с расширенными параметрами"""
-    query = request_data.get("query", "").strip()
-    search_type = request_data.get("type", "keyword")
-    
-    if not query:
-        raise HTTPException(status_code=400, detail="Запрос не может быть пустым")
-    
-    # Дополнительные параметры фильтрации
-    filters = {
-        "videoType": request_data.get("videoType", "all"),
-        "sort": request_data.get("sort", "relevance"),
-        "maxResults": request_data.get("maxResults", 50),
-        "publishedAfter": request_data.get("publishedAfter"),
-        "duration": request_data.get("duration"),  # short, medium, long
-        "videoDefinition": request_data.get("videoDefinition"),  # hd, sd
-        "videoDimension": request_data.get("videoDimension"),  # 2d, 3d
-        "videoCaption": request_data.get("videoCaption"),  # closedCaption, none
-        "videoLicense": request_data.get("videoLicense"),  # creativeCommon, youtube
-        "regionCode": request_data.get("regionCode", "RU"),
-        "relevanceLanguage": request_data.get("relevanceLanguage", "ru"),
-        "autoAnalyze": request_data.get("autoAnalyze", True)  # Автоматический глубокий анализ
-    }
-    
-    request_data["filters"] = filters
-    
-    async with get_session() as session:
-        # Создание задачи
-        task = Task(
-            task_id=f"{search_type}_{datetime.now().timestamp()}",
-            task_type="search" if search_type == "keyword" else "channel_parse",
-            parameters=request_data,
-            status="pending"
-        )
-        session.add(task)
-        await session.commit()
-        
-        # Запуск Celery задачи
-        if search_type == "keyword":
-            celery_task = parse_youtube_search.delay(task.id, request_data)
-        else:
-            celery_task = parse_youtube_channel.delay(task.id, request_data)
-        
-        task.task_id = celery_task.id
-        await session.commit()
-        
-        # Уведомление через WebSocket
-        await send_notification(
-            "Парсинг запущен",
-            f"Начат поиск: {query}",
-            "success"
-        )
-        
-        return task.to_dict()
-
-# ==================== Tasks API ====================
-
-@api_router.get("/tasks")
-async def get_tasks(
-    status: Optional[str] = None,
-    limit: int = Query(50, ge=1, le=100)
+@api_router.get("/channels")
+async def get_channels(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
+    search: Optional[str] = None,
+    sort: str = Query("subscribers", regex="^(subscribers|videos|views|date)$")
 ):
-    """Получение списка задач"""
+    """Получение списка каналов с фильтрацией и пагинацией"""
     async with get_session() as session:
-        query = select(Task).order_by(desc(Task.created_at)).limit(limit)
+        # Базовый запрос
+        query = select(Channel)
         
-        if status:
-            query = query.where(Task.status == status)
+        # Фильтрация по поиску
+        if search:
+            search_filter = or_(
+                Channel.title.ilike(f"%{search}%"),
+                Channel.description.ilike(f"%{search}%")
+            )
+            query = query.where(search_filter)
         
+        # Сортировка
+        if sort == "subscribers":
+            query = query.order_by(desc(Channel.subscriber_count))
+        elif sort == "videos":
+            query = query.order_by(desc(Channel.video_count))
+        elif sort == "views":
+            query = query.order_by(desc(Channel.view_count))
+        else:
+            query = query.order_by(desc(Channel.created_at))
+        
+        # Подсчет общего количества
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await session.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # Пагинация
+        offset = (page - 1) * per_page
+        query = query.limit(per_page).offset(offset)
+        
+        # Выполнение запроса
         result = await session.execute(query)
-        tasks = result.scalars().all()
-        
-        return [
-            {
-                "id": task.id,
-                "task_id": task.task_id,
-                "task_type": task.task_type,
-                "parameters": task.parameters,
-                "status": task.status,
-                "progress": task.progress,
-                "total_items": task.total_items,
-                "processed_items": task.processed_items,
-                "created_at": task.created_at.isoformat() if task.created_at else None,
-                "started_at": task.started_at.isoformat() if task.started_at else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "error_message": task.error_message
-            }
-            for task in tasks
-        ]
-
-@api_router.post("/tasks/{task_id}/pause")
-async def pause_task(task_id: int):
-    """Приостановка задачи"""
-    async with get_session() as session:
-        stmt = select(Task).where(Task.id == task_id)
-        result = await session.execute(stmt)
-        task = result.scalar_one_or_none()
-        
-        if not task:
-            raise HTTPException(status_code=404, detail="Задача не найдена")
-        
-        if task.status != "running":
-            raise HTTPException(status_code=400, detail="Задача не выполняется")
-        
-        # Приостановка Celery задачи
-        celery_pause_task(task.task_id)
-        
-        task.status = "paused"
-        task.paused_at = datetime.now()
-        await session.commit()
-        
-        # Уведомление
-        await notify_task_update(task.to_dict())
-        
-        return {"status": "paused"}
-
-@api_router.post("/tasks/{task_id}/resume")
-async def resume_task(task_id: int):
-    """Возобновление задачи"""
-    async with get_session() as session:
-        stmt = select(Task).where(Task.id == task_id)
-        result = await session.execute(stmt)
-        task = result.scalar_one_or_none()
-        
-        if not task:
-            raise HTTPException(status_code=404, detail="Задача не найдена")
-        
-        if task.status != "paused":
-            raise HTTPException(status_code=400, detail="Задача не приостановлена")
-        
-        # Возобновление Celery задачи
-        celery_resume_task(task.task_id)
-        
-        task.status = "running"
-        await session.commit()
-        
-        # Уведомление
-        await notify_task_update(task.to_dict())
-        
-        return {"status": "resumed"}
-
-@api_router.post("/tasks/{task_id}/cancel")
-async def cancel_task(task_id: int):
-    """Отмена задачи"""
-    async with get_session() as session:
-        stmt = select(Task).where(Task.id == task_id)
-        result = await session.execute(stmt)
-        task = result.scalar_one_or_none()
-        
-        if not task:
-            raise HTTPException(status_code=404, detail="Задача не найдена")
-        
-        # Отмена Celery задачи
-        celery_cancel_task(task.task_id)
-        
-        task.status = "cancelled"
-        await session.commit()
-        
-        # Уведомление
-        await notify_task_update(task.to_dict())
-        
-        return {"status": "cancelled"}
-
-@api_router.post("/tasks/pause-all")
-async def pause_all_tasks():
-    """Приостановка всех активных задач"""
-    async with get_session() as session:
-        stmt = select(Task).where(Task.status == "running")
-        result = await session.execute(stmt)
-        tasks = result.scalars().all()
-        
-        paused_count = 0
-        for task in tasks:
-            try:
-                celery_pause_task(task.task_id)
-                task.status = "paused"
-                task.paused_at = datetime.now()
-                paused_count += 1
-            except:
-                pass
-        
-        await session.commit()
-        
-        return {"paused_count": paused_count}
-
-@api_router.post("/tasks/resume-all")
-async def resume_all_tasks():
-    """Возобновление всех приостановленных задач"""
-    async with get_session() as session:
-        stmt = select(Task).where(Task.status == "paused")
-        result = await session.execute(stmt)
-        tasks = result.scalars().all()
-        
-        resumed_count = 0
-        for task in tasks:
-            try:
-                celery_resume_task(task.task_id)
-                task.status = "running"
-                resumed_count += 1
-            except:
-                pass
-        
-        await session.commit()
-        
-        return {"resumed_count": resumed_count}
-
-@api_router.delete("/tasks/completed")
-async def clear_completed_tasks():
-    """Удаление завершенных задач"""
-    async with get_session() as session:
-        stmt = select(Task).where(
-            Task.status.in_(["completed", "failed", "cancelled"])
-        )
-        result = await session.execute(stmt)
-        tasks = result.scalars().all()
-        
-        deleted_count = len(tasks)
-        for task in tasks:
-            await session.delete(task)
-        
-        await session.commit()
-        
-        return {"deleted_count": deleted_count}
-
-# ==================== Analytics API ====================
-
-@api_router.get("/analytics/stats")
-async def get_analytics_stats():
-    """Получение статистики для дашборда"""
-    async with get_session() as session:
-        # Общая статистика
-        total_videos = await session.scalar(
-            select(func.count(Video.id)).where(Video.parse_status == "completed")
-        )
-        
-        total_channels = await session.scalar(
-            select(func.count(func.distinct(Video.channel_url)))
-        )
-        
-        # Средняя вовлеченность
-        avg_engagement = await session.scalar(
-            select(func.avg(Video.engagement_rate)).where(Video.engagement_rate > 0)
-        )
-        
-        # Видео за последнюю неделю
-        week_ago = datetime.now() - timedelta(days=7)
-        videos_this_week = await session.scalar(
-            select(func.count(Video.id)).where(
-                and_(
-                    Video.created_at >= week_ago,
-                    Video.parse_status == "completed"
-                )
-            )
-        )
-        
-        # Топ категория
-        top_category_result = await session.execute(
-            select(
-                Video.video_category,
-                func.count(Video.id).label("count")
-            )
-            .where(Video.video_category.isnot(None))
-            .group_by(Video.video_category)
-            .order_by(desc("count"))
-            .limit(1)
-        )
-        top_category = top_category_result.first()
-        
-        # Топ видео по вовлеченности
-        top_videos_stmt = select(Video).where(
-            Video.parse_status == "completed"
-        ).order_by(
-            desc(Video.engagement_rate)
-        ).limit(10)
-        top_videos_result = await session.execute(top_videos_stmt)
-        top_videos = top_videos_result.scalars().all()
+        channels = result.scalars().all()
         
         return {
-            "stats": {
-                "totalVideos": total_videos or 0,
-                "totalChannels": total_channels or 0,
-                "avgEngagement": round(avg_engagement or 0, 2),
-                "topCategory": top_category[0] if top_category else "Не определено",
-                "videosThisWeek": videos_this_week or 0
-            },
-            "topVideos": [
+            "channels": [
+                {
+                    "id": channel.id,
+                    "channel_id": channel.channel_id,
+                    "channel_url": channel.channel_url,
+                    "title": channel.title,
+                    "description": channel.description[:200] + "..." if channel.description and len(channel.description) > 200 else channel.description,
+                    "subscriber_count": channel.subscriber_count,
+                    "video_count": channel.video_count,
+                    "view_count": channel.view_count,
+                    "avg_views": channel.avg_views,
+                    "avg_likes": channel.avg_likes,
+                    "avg_comments": channel.avg_comments,
+                    "upload_frequency": channel.upload_frequency,
+                    "country": channel.country,
+                    "created_date": channel.created_date.isoformat() if channel.created_date else None,
+                    "thumbnail_url": channel.thumbnail_url,
+                    "last_parsed": channel.last_parsed.isoformat() if channel.last_parsed else None
+                }
+                for channel in channels
+            ],
+            "pagination": {
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "pages": (total + per_page - 1) // per_page if total > 0 else 0
+            }
+        }
+
+@api_router.get("/channels/{channel_id}")
+async def get_channel(channel_id: int):
+    """Получение детальной информации о канале"""
+    async with get_session() as session:
+        stmt = select(Channel).where(Channel.id == channel_id)
+        result = await session.execute(stmt)
+        channel = result.scalar_one_or_none()
+        
+        if not channel:
+            raise HTTPException(status_code=404, detail="Канал не найден")
+        
+        # Получаем последние видео канала
+        videos_stmt = select(Video).where(
+            Video.channel_url == channel.channel_url
+        ).order_by(desc(Video.publish_date)).limit(10)
+        videos_result = await session.execute(videos_stmt)
+        recent_videos = videos_result.scalars().all()
+        
+        return {
+            "id": channel.id,
+            "channel_id": channel.channel_id,
+            "channel_url": channel.channel_url,
+            "title": channel.title,
+            "description": channel.description,
+            "subscriber_count": channel.subscriber_count,
+            "video_count": channel.video_count,
+            "view_count": channel.view_count,
+            "avg_views": channel.avg_views,
+            "avg_likes": channel.avg_likes,
+            "avg_comments": channel.avg_comments,
+            "upload_frequency": channel.upload_frequency,
+            "country": channel.country,
+            "created_date": channel.created_date.isoformat() if channel.created_date else None,
+            "thumbnail_url": channel.thumbnail_url,
+            "keywords": channel.keywords,
+            "content_categories": channel.content_categories,
+            "target_audience": channel.target_audience,
+            "last_parsed": channel.last_parsed.isoformat() if channel.last_parsed else None,
+            "created_at": channel.created_at.isoformat() if channel.created_at else None,
+            "recent_videos": [
                 {
                     "id": video.id,
                     "title": video.title,
-                    "channel_name": video.channel_url.split("/")[-1] if video.channel_url else "Unknown",
                     "views": video.views,
-                    "engagement_rate": round(video.engagement_rate, 2),
+                    "publish_date": video.publish_date.isoformat() if video.publish_date else None,
                     "thumbnail_url": video.thumbnail_url
                 }
-                for video in top_videos
+                for video in recent_videos
             ]
         }
-
-@api_router.get("/search-queries")
-async def get_search_queries(limit: int = Query(10, ge=1, le=50)):
-    """Получение последних поисковых запросов"""
-    async with get_session() as session:
-        stmt = select(SearchQuery).order_by(desc(SearchQuery.created_at)).limit(limit)
-        result = await session.execute(stmt)
-        queries = result.scalars().all()
-        
-        return [
-            {
-                "id": q.id,
-                "query": q.query,
-                "type": q.search_type,
-                "results": q.total_results,
-                "date": q.created_at.isoformat() if q.created_at else None
-            }
-            for q in queries
-        ]
-
-# ==================== Settings API ====================
-
-@api_router.get("/settings")
-async def get_settings():
-    """Получение настроек приложения из .env"""
-    return {
-        # API Keys
-        "youtubeApiKey": os.getenv("YOUTUBE_API_KEY", ""),
-        
-        # Database Configuration
-        "databasePath": os.getenv("DATABASE_PATH", "youtube_data.db"),
-        
-        # Server Configuration
-        "host": os.getenv("HOST", "127.0.0.1"),
-        "port": int(os.getenv("PORT", 8000)),
-        "debug": os.getenv("DEBUG", "false").lower() == "true",
-        
-        # Directories
-        "tempDir": os.getenv("TEMP_DIR", "temp"),
-        "exportDir": os.getenv("EXPORT_DIR", "exports"),
-        "logsDir": os.getenv("LOGS_DIR", "logs"),
-        
-        # Redis Configuration
-        "redisUrl": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"),
-        
-        # Celery Configuration
-        "celeryBrokerUrl": os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0"),
-        "celeryResultBackend": os.getenv("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/0"),
-        
-        # API Limits
-        "maxResultsPerSearch": int(os.getenv("MAX_RESULTS_PER_SEARCH", 500)),
-        "apiRequestDelay": int(os.getenv("API_REQUEST_DELAY", 3)),
-        
-        # Export Settings
-        "exportPageSize": int(os.getenv("EXPORT_PAGE_SIZE", 1000)),
-        "maxExportRows": int(os.getenv("MAX_EXPORT_ROWS", 50000)),
-        
-        # Features Flags
-        "enableDeepAnalysis": os.getenv("ENABLE_DEEP_ANALYSIS", "true").lower() == "true",
-        "enableWebsocket": os.getenv("ENABLE_WEBSOCKET", "true").lower() == "true",
-        "enableAutoRetry": os.getenv("ENABLE_AUTO_RETRY", "true").lower() == "true",
-        
-        # Security (masked)
-        "secretKey": "***" if os.getenv("SECRET_KEY") else "",
-        "jwtAlgorithm": os.getenv("JWT_ALGORITHM", "HS256"),
-        "accessTokenExpireMinutes": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-    }
-
-@api_router.post("/settings")
-async def save_settings(settings: Dict[str, Any]):
-    """Сохранение настроек приложения"""
-    # В реальном приложении здесь бы обновлялся .env файл
-    # Для примера сохраним в базу данных
-    async with get_session() as session:
-        # Можно создать таблицу Settings для хранения настроек
-        # Пока просто возвращаем успех
-        return {"status": "saved", "message": "Настройки сохранены"}
-
-# ==================== Export/Import API ====================
-
-@api_router.get("/export/database")
-async def export_database():
-    """Экспорт базы данных"""
-    zip_buffer = io.BytesIO()
-    
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        # Добавление базы данных
-        db_path = os.getenv("DATABASE_PATH", "youtube_data.db")
-        if os.path.exists(db_path):
-            zip_file.write(db_path, "youtube_data.db")
-        
-        # Добавление файлов из папки exports
-        exports_dir = os.getenv("EXPORT_DIR", "exports")
-        if os.path.exists(exports_dir):
-            for filename in os.listdir(exports_dir):
-                file_path = os.path.join(exports_dir, filename)
-                if os.path.isfile(file_path):
-                    zip_file.write(file_path, f"exports/{filename}")
-        
-        # Добавление конфигурации (без секретных данных)
-        config_data = {
-            "version": "1.0.0",
-            "export_date": datetime.now().isoformat(),
-            "total_videos": 0,
-            "total_channels": 0
-        }
-        
-        # Получаем статистику
-        async with get_session() as session:
-            config_data["total_videos"] = await session.scalar(
-                select(func.count(Video.id))
-            ) or 0
-            config_data["total_channels"] = await session.scalar(
-                select(func.count(Channel.id))
-            ) or 0
-        
-        zip_file.writestr("config.json", json.dumps(config_data, indent=2))
-    
-    zip_buffer.seek(0)
-    
-    return StreamingResponse(
-        zip_buffer,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f"attachment; filename=youtube_analyzer_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-        }
-    )
-
-@api_router.post("/import/database")
-async def import_database(file: UploadFile = File(...)):
-    """Импорт базы данных"""
-    if not file.filename.endswith(".zip"):
-        raise HTTPException(status_code=400, detail="Файл должен быть ZIP архивом")
-    
-    # Сохранение и распаковка архива
-    temp_dir = os.getenv("TEMP_DIR", "temp")
-    os.makedirs(temp_dir, exist_ok=True)
-    
-    temp_path = os.path.join(temp_dir, file.filename)
-    
-    # Сохранение файла
-    content = await file.read()
-    with open(temp_path, "wb") as f:
-        f.write(content)
-    
-    try:
-        # Распаковка
-        with zipfile.ZipFile(temp_path, "r") as zip_file:
-            # Проверка наличия базы данных в архиве
-            if "youtube_data.db" not in zip_file.namelist():
-                raise HTTPException(status_code=400, detail="В архиве отсутствует база данных")
-            
-            # Создание резервной копии текущей БД
-            db_path = os.getenv("DATABASE_PATH", "youtube_data.db")
-            if os.path.exists(db_path):
-                backup_path = f"{db_path}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                os.rename(db_path, backup_path)
-            
-            # Извлечение новой БД
-            zip_file.extract("youtube_data.db", ".")
-            
-            # Извлечение экспортов
-            exports_dir = os.getenv("EXPORT_DIR", "exports")
-            os.makedirs(exports_dir, exist_ok=True)
-            
-            for file_info in zip_file.filelist:
-                if file_info.filename.startswith("exports/"):
-                    zip_file.extract(file_info, ".")
-        
-        return {"status": "imported", "message": "База данных успешно импортирована"}
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при импорте: {str(e)}")
-    
-    finally:
-        # Очистка временных файлов
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-
-# ==================== Help API ====================
-
-@api_router.get("/help/content")
-async def get_help_content():
-    """Получение содержимого справки в JSON формате"""
-    return {
-        "sections": [
-            {
-                "id": "parsing",
-                "title": "Возможности парсинга",
-                "content": {
-                    "types": [
-                        {"name": "По ключевым словам", "description": "Поиск видео по любым ключевым фразам"},
-                        {"name": "По каналу", "description": "Анализ всех видео конкретного канала"},
-                        {"name": "По плейлисту", "description": "Анализ видео из плейлиста (в разработке)"},
-                        {"name": "По трендам", "description": "Автоматический поиск трендовых видео (в разработке)"}
-                    ],
-                    "filters": [
-                        {"param": "Тип видео", "values": ["Все", "Shorts", "Длинные"]},
-                        {"param": "Сортировка", "values": ["Релевантность", "Дата", "Просмотры", "Рейтинг"]},
-                        {"param": "Период", "values": ["Любое", "Час", "Сегодня", "Неделя", "Месяц", "Год"]},
-                        {"param": "Длительность", "values": ["Короткие (<4 мин)", "Средние (4-20 мин)", "Длинные (>20 мин)"]},
-                        {"param": "Качество", "values": ["HD (720p+)", "4K"]},
-                        {"param": "Субтитры", "values": ["С субтитрами", "Без субтитров"]}
-                    ]
-                }
-            },
-            {
-                "id": "parameters",
-                "title": "Параметры анализа",
-                "content": {
-                    "total": 42,
-                    "categories": [
-                        {
-                            "name": "Базовые параметры",
-                            "params": ["video_url", "channel_url", "is_short", "title", "description", "duration", "publish_date", "thumbnail_url", "video_category", "video_quality"]
-                        },
-                        {
-                            "name": "Метрики вовлеченности",
-                            "params": ["views", "likes", "comments", "dislikes", "like_ratio", "comment_ratio", "engagement_rate", "average_view_duration", "click_through_rate"]
-                        },
-                        {
-                            "name": "Контент и оптимизация",
-                            "params": ["has_branding", "subtitles", "keywords", "has_cc", "has_pinned_comment", "links_in_description", "top_5_keywords", "has_chapters", "emoji_in_title"]
-                        },
-                        {
-                            "name": "Канал и контакты",
-                            "params": ["links_in_channel_description", "contacts_in_video", "contacts_in_channel", "channel_avg_views", "channel_avg_likes", "channel_frequency", "channel_age"]
-                        },
-                        {
-                            "name": "Технические параметры",
-                            "params": ["has_intro", "has_outro", "speech_speed", "links_in_description"]
-                        },
-                        {
-                            "name": "AI-анализ",
-                            "params": ["improvement_recommendations", "success_analysis", "content_strategy"]
-                        }
-                    ]
-                }
-            }
-        ]
-    }

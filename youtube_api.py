@@ -111,6 +111,34 @@ class YouTubeClient:
             pass
         return None
     
+    def _count_links_in_text(self, text: str) -> int:
+        """Подсчет количества ссылок в тексте"""
+        if not text:
+            return 0
+        
+        # Паттерны для поиска ссылок
+        url_patterns = [
+            r'https?://[^\s<>"{}|\\^`\[\]]+',  # HTTP/HTTPS URLs
+            r'www\.[^\s<>"{}|\\^`\[\]]+',      # www. URLs
+            r'[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}(?:/[^\s<>"{}|\\^`\[\]]*)?',  # domain.com URLs
+        ]
+        
+        links = set()
+        for pattern in url_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            links.update(matches)
+        
+        # Фильтрация коротких доменов, которые могут быть не ссылками
+        filtered_links = []
+        for link in links:
+            # Проверяем, что это действительно похоже на ссылку
+            if '.' in link and len(link) > 4:
+                # Исключаем временные метки (например, 1.23)
+                if not re.match(r'^\d+\.\d+$', link):
+                    filtered_links.append(link)
+        
+        return len(filtered_links)
+    
     async def search_videos(
         self,
         query: str,
@@ -282,6 +310,9 @@ class YouTubeClient:
             # Извлечение ПОЛНОГО описания (API возвращает полное описание)
             full_description = video_info["snippet"]["description"]
             
+            # ПОДСЧЕТ ССЫЛОК В ОПИСАНИИ
+            links_count = self._count_links_in_text(full_description)
+            
             # Базовые данные
             details = {
                 "video_id": video_id,
@@ -303,7 +334,8 @@ class YouTubeClient:
                 "tags": video_info["snippet"].get("tags", []),
                 "has_captions": video_info["contentDetails"].get("caption") == "true",
                 "video_quality": video_info["contentDetails"].get("definition", "sd"),
-                "is_live": video_info["snippet"].get("liveBroadcastContent") == "live"
+                "is_live": video_info["snippet"].get("liveBroadcastContent") == "live",
+                "links_in_description": links_count  # ДОБАВЛЕНО: количество ссылок
             }
             
             # Проверка на эмодзи в заголовке
@@ -338,6 +370,8 @@ class YouTubeClient:
                     # Если через yt-dlp получено более полное описание
                     if ydl_data.get("full_description") and len(ydl_data["full_description"]) > len(full_description):
                         details["description"] = ydl_data["full_description"]
+                        # Пересчитываем ссылки для полного описания
+                        details["links_in_description"] = self._count_links_in_text(ydl_data["full_description"])
             except Exception as e:
                 logger.error(f"Error getting yt-dlp data: {e}")
             
@@ -572,7 +606,7 @@ class YouTubeClient:
         """Получение информации о канале"""
         try:
             response = self.youtube.channels().list(
-                part="snippet,statistics,contentDetails,brandingSettings",
+                part="snippet,statistics,contentDetails,brandingSettings,status",
                 id=channel_id
             ).execute()
             
@@ -585,21 +619,42 @@ class YouTubeClient:
             description = channel["snippet"].get("description", "")
             contacts = self._extract_contacts(description)
             
+            # Подсчет ссылок в описании канала
+            links_in_description = self._count_links_in_text(description)
+            
+            # Вычисление дополнительных метрик
+            video_count = int(channel["statistics"].get("videoCount", 0))
+            view_count = int(channel["statistics"].get("viewCount", 0))
+            subscriber_count = int(channel["statistics"].get("subscriberCount", 0))
+            
+            # Средние просмотры на видео
+            avg_views_per_video = view_count / video_count if video_count > 0 else 0
+            
+            # Вычисление возраста канала
+            created_date = datetime.fromisoformat(channel["snippet"]["publishedAt"].replace("Z", "+00:00"))
+            channel_age_days = (datetime.now().replace(tzinfo=created_date.tzinfo) - created_date).days
+            
             return {
                 "channel_id": channel_id,
                 "channel_url": f"https://youtube.com/channel/{channel_id}",
                 "title": channel["snippet"]["title"],
                 "description": description,
-                "subscriber_count": int(channel["statistics"].get("subscriberCount", 0)),
-                "video_count": int(channel["statistics"].get("videoCount", 0)),
-                "view_count": int(channel["statistics"].get("viewCount", 0)),
+                "subscriber_count": subscriber_count,
+                "video_count": video_count,
+                "view_count": view_count,
                 "created_date": channel["snippet"]["publishedAt"],
                 "country": channel["snippet"].get("country"),
                 "thumbnail_url": channel["snippet"]["thumbnails"]["high"]["url"],
                 "uploads_playlist_id": channel["contentDetails"]["relatedPlaylists"]["uploads"],
                 "custom_url": channel["snippet"].get("customUrl"),
                 "keywords": channel["brandingSettings"]["channel"].get("keywords", "").split() if "brandingSettings" in channel else [],
-                "contacts": contacts
+                "contacts": contacts,
+                "links_in_description": links_in_description,
+                "avg_views_per_video": int(avg_views_per_video),
+                "channel_age_days": channel_age_days,
+                "is_verified": channel["status"].get("isLinked", False) if "status" in channel else False,
+                "banner_url": channel["brandingSettings"]["image"]["bannerExternalUrl"] if "brandingSettings" in channel and "image" in channel["brandingSettings"] else None,
+                "trailer_video_id": channel["brandingSettings"]["channel"].get("unsubscribedTrailer") if "brandingSettings" in channel else None
             }
             
         except HttpError as e:

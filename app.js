@@ -8,6 +8,7 @@ createApp({
             tabs: [
                 { id: 'parsing', name: 'Парсинг' },
                 { id: 'videos', name: 'Видео', badge: 0 },
+                { id: 'channels', name: 'Каналы', badge: 0 },
                 { id: 'tasks', name: 'Задачи', badge: 0 },
                 { id: 'analytics', name: 'Аналитика' },
                 { id: 'settings', name: 'Настройки' },
@@ -70,6 +71,15 @@ createApp({
                 channelFrequencyMin: null,
                 channelFrequencyMax: null,
                 quality: ''
+            },
+            
+            // Channels
+            channels: [],
+            selectedChannel: null,
+            channelViewMode: 'table',
+            channelFilters: {
+                search: '',
+                sort: 'subscribers'
             },
             
             // Table scroll sync
@@ -139,6 +149,7 @@ createApp({
             currentTime: '',
             recentQueries: [],
             showExportMenu: false,
+            showChannelExportMenu: false,
             
             // WebSocket
             ws: null,
@@ -257,6 +268,36 @@ createApp({
                     case 'date':
                     default:
                         return new Date(b.publish_date) - new Date(a.publish_date);
+                }
+            });
+            
+            return filtered;
+        },
+        
+        filteredChannels() {
+            let filtered = [...this.channels];
+            
+            // Поиск
+            if (this.channelFilters.search) {
+                const search = this.channelFilters.search.toLowerCase();
+                filtered = filtered.filter(c => 
+                    c.title.toLowerCase().includes(search) ||
+                    c.description?.toLowerCase().includes(search)
+                );
+            }
+            
+            // Сортировка
+            filtered.sort((a, b) => {
+                switch (this.channelFilters.sort) {
+                    case 'subscribers':
+                        return b.subscriber_count - a.subscriber_count;
+                    case 'videos':
+                        return b.video_count - a.video_count;
+                    case 'views':
+                        return b.view_count - a.view_count;
+                    case 'date':
+                    default:
+                        return new Date(b.created_date || 0) - new Date(a.created_date || 0);
                 }
             });
             
@@ -409,6 +450,7 @@ createApp({
         async loadData() {
             await Promise.all([
                 this.loadVideos(),
+                this.loadChannels(),
                 this.loadTasks(),
                 this.loadRecentQueries(),
                 this.loadStats()
@@ -427,6 +469,16 @@ createApp({
                     title: 'Ошибка',
                     message: 'Не удалось загрузить видео'
                 });
+            }
+        },
+        
+        async loadChannels() {
+            try {
+                const response = await axios.get('/api/channels');
+                this.channels = response.data.channels || [];
+                this.updateBadges();
+            } catch (error) {
+                console.error('Failed to load channels:', error);
             }
         },
         
@@ -523,7 +575,11 @@ createApp({
             this.selectedVideo = video;
         },
         
-        // Исправленный экспорт видео
+        viewChannel(channel) {
+            this.selectedChannel = channel;
+        },
+        
+        // ИСПРАВЛЕННЫЙ экспорт видео
         async exportVideos(format = 'excel') {
             try {
                 // Получаем отфильтрованные видео
@@ -542,23 +598,16 @@ createApp({
                 const videoIds = videosToExport.map(v => v.id).join(',');
                 const url = `/api/videos/export?format=${format}&ids=${videoIds}`;
                 
-                const response = await axios.get(url, {
-                    responseType: 'blob'
-                });
+                // Создаем ссылку для скачивания
+                const link = document.createElement('a');
+                link.href = url;
                 
-                // Определяем расширение файла
+                // Имя файла с датой и количеством записей
+                const date = new Date().toISOString().split('T')[0];
                 let extension = 'xlsx';
                 if (format === 'csv') extension = 'csv';
                 else if (format === 'json') extension = 'json';
                 
-                // Создаем ссылку для скачивания
-                const blob = new Blob([response.data]);
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                
-                // Имя файла с датой и количеством записей
-                const date = new Date().toISOString().split('T')[0];
                 const filename = `youtube_analysis_${date}_${videosToExport.length}_videos.${extension}`;
                 link.setAttribute('download', filename);
                 
@@ -566,13 +615,10 @@ createApp({
                 link.click();
                 link.remove();
                 
-                // Освобождаем память
-                window.URL.revokeObjectURL(downloadUrl);
-                
                 this.showNotification({
                     type: 'success',
-                    title: 'Экспорт завершен',
-                    message: `Экспортировано ${videosToExport.length} видео в формате ${format.toUpperCase()}`
+                    title: 'Экспорт запущен',
+                    message: `Экспортируется ${videosToExport.length} видео в формате ${format.toUpperCase()}`
                 });
             } catch (error) {
                 console.error('Export error:', error);
@@ -580,6 +626,41 @@ createApp({
                     type: 'error',
                     title: 'Ошибка экспорта',
                     message: 'Не удалось экспортировать данные. Проверьте консоль для деталей.'
+                });
+            }
+        },
+        
+        // Экспорт каналов
+        async exportChannels(format = 'excel') {
+            try {
+                const url = `/api/channels/export?format=${format}`;
+                
+                const link = document.createElement('a');
+                link.href = url;
+                
+                const date = new Date().toISOString().split('T')[0];
+                let extension = 'xlsx';
+                if (format === 'csv') extension = 'csv';
+                else if (format === 'json') extension = 'json';
+                
+                const filename = `youtube_channels_${date}.${extension}`;
+                link.setAttribute('download', filename);
+                
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                
+                this.showNotification({
+                    type: 'success',
+                    title: 'Экспорт запущен',
+                    message: `Экспортируются каналы в формате ${format.toUpperCase()}`
+                });
+            } catch (error) {
+                console.error('Export error:', error);
+                this.showNotification({
+                    type: 'error',
+                    title: 'Ошибка экспорта',
+                    message: 'Не удалось экспортировать каналы'
                 });
             }
         },
@@ -695,16 +776,20 @@ createApp({
         
         async pauseAllTasks() {
             try {
-                await axios.post('/api/tasks/pause-all');
+                const response = await axios.post('/api/tasks/pause-all');
+                const pausedCount = response.data.paused_count;
+                
+                // Обновляем локальное состояние задач
                 this.tasks.forEach(task => {
                     if (task.status === 'running') {
                         task.status = 'paused';
                     }
                 });
+                
                 this.showNotification({
                     type: 'success',
                     title: 'Задачи приостановлены',
-                    message: 'Все активные задачи приостановлены'
+                    message: `Приостановлено задач: ${pausedCount}`
                 });
             } catch (error) {
                 this.showNotification({
@@ -717,16 +802,20 @@ createApp({
         
         async resumeAllTasks() {
             try {
-                await axios.post('/api/tasks/resume-all');
+                const response = await axios.post('/api/tasks/resume-all');
+                const resumedCount = response.data.resumed_count;
+                
+                // Обновляем локальное состояние задач
                 this.tasks.forEach(task => {
                     if (task.status === 'paused') {
                         task.status = 'running';
                     }
                 });
+                
                 this.showNotification({
                     type: 'success',
                     title: 'Задачи возобновлены',
-                    message: 'Все приостановленные задачи возобновлены'
+                    message: `Возобновлено задач: ${resumedCount}`
                 });
             } catch (error) {
                 this.showNotification({
@@ -907,7 +996,8 @@ createApp({
         // UI Helpers
         updateBadges() {
             this.tabs[1].badge = this.videos.length;
-            this.tabs[2].badge = this.activeTasks.length;
+            this.tabs[2].badge = this.channels.length;
+            this.tabs[3].badge = this.activeTasks.length;
         },
         
         showNotification(notification) {
