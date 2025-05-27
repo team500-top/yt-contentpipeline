@@ -96,10 +96,17 @@ async def health_check():
         "websocket_connections": len(manager.active_connections)
     }
 
-# Статические файлы (если есть)
-static_path = Path("static")
-if static_path.exists():
+# Монтирование статических папок
+if Path("static").exists():
     app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ВАЖНО: Монтирование папки components
+if Path("components").exists():
+    app.mount("/components", StaticFiles(directory="components"), name="components")
+
+# ВАЖНО: Монтирование папки utils
+if Path("utils").exists():
+    app.mount("/utils", StaticFiles(directory="utils"), name="utils")
 
 # Основная страница
 @app.get("/")
@@ -121,13 +128,21 @@ async def read_index():
 @app.get("/app.js")
 async def read_app_js():
     """JavaScript приложения"""
-    return FileResponse("app.js")
+    app_js_path = Path("app.js")
+    if app_js_path.exists():
+        return FileResponse("app.js", media_type="application/javascript")
+    else:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "app.js not found"}
+        )
 
 @app.get("/styles.css")
 async def read_styles():
     """CSS стили"""
-    if Path("styles.css").exists():
-        return FileResponse("styles.css")
+    styles_path = Path("styles.css")
+    if styles_path.exists():
+        return FileResponse("styles.css", media_type="text/css")
     else:
         # Возвращаем пустой CSS если файл не найден
         return Response(content="", media_type="text/css")
@@ -135,7 +150,8 @@ async def read_styles():
 @app.get("/help.html")
 async def read_help():
     """Страница справки"""
-    if Path("help.html").exists():
+    help_path = Path("help.html")
+    if help_path.exists():
         return FileResponse("help.html")
     else:
         return JSONResponse(
@@ -147,6 +163,9 @@ async def read_help():
 @app.exception_handler(404)
 async def not_found(request: Request, exc):
     """Обработчик 404 ошибок"""
+    # Логирование для отладки
+    logger.warning(f"404 Not Found: {request.url.path}")
+    
     return JSONResponse(
         status_code=404,
         content={
@@ -178,6 +197,7 @@ async def api_info():
         "documentation": "/docs",
         "endpoints": {
             "videos": "/api/videos",
+            "channels": "/api/channels",
             "tasks": "/api/tasks",
             "parse": "/api/parse",
             "analytics": "/api/analytics/stats",
@@ -198,13 +218,32 @@ if __name__ == "__main__":
     logger.info(f"Debug mode: {debug}")
     logger.info(f"API documentation available at: http://{host}:{port}/docs")
     
+    # Проверка наличия важных файлов
+    required_files = ["index.html", "app.js"]
+    missing_files = []
+    
+    for file in required_files:
+        if not Path(file).exists():
+            missing_files.append(file)
+            logger.warning(f"Warning: {file} not found in root directory")
+    
+    # Проверка наличия компонентов
+    if not Path("components").exists():
+        logger.warning("Warning: components directory not found")
+    else:
+        component_files = list(Path("components").glob("*.js"))
+        logger.info(f"Found {len(component_files)} component files")
+    
+    if missing_files:
+        logger.error(f"Missing required files: {', '.join(missing_files)}")
+    
     # Конфигурация Uvicorn
     uvicorn.run(
         "main:app",
         host=host,
         port=port,
         reload=debug,
-        reload_dirs=[".", "api", "models", "tasks"] if debug else None,
+        reload_dirs=[".", "api", "models", "tasks", "components", "utils"] if debug else None,
         log_level="info",
         access_log=True
     )
