@@ -1,177 +1,178 @@
 @echo off
-chcp 65001 >nul
-title YouTube Analyzer - Полная установка
+REM =============================================================================
+REM YouTube Analyzer - Complete Installation (Fixed Encoding)
+REM =============================================================================
+
+title YouTube Analyzer - Full Installation
 color 0B
 
 echo.
-echo ███████╗███████╗████████╗██╗   ██╗██████╗ 
-echo ██╔════╝██╔════╝╚══██╔══╝██║   ██║██╔══██╗
-echo ███████╗█████╗     ██║   ██║   ██║██████╔╝
-echo ╚════██║██╔══╝     ██║   ██║   ██║██╔═══╝ 
-echo ███████║███████╗   ██║   ╚██████╔╝██║     
-echo ╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝     
+echo ===============================================================================
+echo    YOUTUBE ANALYZER - COMPLETE INSTALLATION
+echo    Automatic system setup
+echo ===============================================================================
 echo.
-echo          YOUTUBE ANALYZER - ПОЛНАЯ УСТАНОВКА
-echo               Автоматическая настройка системы
-echo.
-echo =============================================================================
 
-REM Проверка прав администратора
+REM Check administrator rights
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ❌ ТРЕБУЮТСЯ ПРАВА АДМИНИСТРАТОРА!
+    echo [ERROR] ADMINISTRATOR RIGHTS REQUIRED!
     echo.
-    echo 🔒 Для установки необходимо запустить этот файл от имени администратора:
-    echo    1. Щелкните правой кнопкой мыши по файлу
-    echo    2. Выберите "Запуск от имени администратора"
+    echo To install, you need to run this file as administrator:
+    echo    1. Right-click on the file
+    echo    2. Select "Run as administrator"
     echo.
     pause
     exit /b 1
 )
 
-echo ✅ Права администратора получены
+echo [OK] Administrator rights obtained
 echo.
 
-REM Создание базовой структуры
-echo 📁 Создание структуры проекта...
+REM Create base structure
+echo [STEP] Creating project structure...
 if not exist "C:\" (
-    echo ❌ Диск C: недоступен!
+    echo [ERROR] Drive C: is not accessible!
     pause
     exit /b 1
 )
 
-REM Создание основной папки с правами
+REM Create main folder with permissions
 mkdir "C:\youtube-analyzer" 2>nul
 cd /d "C:\youtube-analyzer"
 
-REM Установка полных прав для папки
+REM Set full permissions for folder
 icacls "C:\youtube-analyzer" /grant Everyone:F /T /Q >nul 2>&1
 
-echo ✅ Папка C:\youtube-analyzer создана с полными правами
+echo [OK] Folder C:\youtube-analyzer created with full permissions
 
-REM Создание подпапок
+REM Create subfolders
 for %%d in (data reports logs src templates tests .cache venv) do (
     mkdir "%%d" 2>nul
 )
 
-echo ✅ Структура папок создана
+echo [OK] Folder structure created
 
-REM Проверка и установка Python
+REM Check and install Python
 echo.
-echo 🐍 Проверка Python...
+echo [STEP] Checking Python...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ❌ Python не найден!
+    echo [ERROR] Python not found!
     echo.
-    echo 📥 Автоматическая установка Python...
+    echo [INFO] Automatic Python installation...
     
-    REM Скачивание и установка Python
+    REM Download and install Python
     powershell -Command "& {
         $url = 'https://www.python.org/ftp/python/3.11.7/python-3.11.7-amd64.exe'
         $output = 'python-installer.exe'
-        Write-Host 'Скачивание Python...'
-        Invoke-WebRequest -Uri $url -OutFile $output
-        Write-Host 'Установка Python...'
-        Start-Process -FilePath $output -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 Include_test=0' -Wait
-        Remove-Item $output
+        Write-Host 'Downloading Python...'
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $output
+            Write-Host 'Installing Python...'
+            Start-Process -FilePath $output -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 Include_test=0' -Wait
+            Remove-Item $output
+        } catch {
+            Write-Host 'Download failed. Please install Python manually.'
+        }
     }"
     
-    REM Обновление PATH
+    REM Update PATH
     refreshenv >nul 2>&1
     
-    REM Повторная проверка
+    REM Re-check
     python --version >nul 2>&1
     if %errorlevel% neq 0 (
-        echo ❌ Автоматическая установка Python не удалась
-        echo 🔧 Установите Python вручную с https://python.org/downloads/
-        echo ⚠️  ОБЯЗАТЕЛЬНО отметьте "Add Python to PATH"
+        echo [ERROR] Automatic Python installation failed
+        echo [INFO] Please install Python manually from https://python.org/downloads/
+        echo [WARNING] Make sure to check "Add Python to PATH"
         pause
         exit /b 1
     )
 )
 
-echo ✅ Python установлен:
+echo [OK] Python is installed:
 python --version
 
-REM Создание виртуального окружения
+REM Create virtual environment
 echo.
-echo 🔧 Настройка виртуального окружения...
+echo [STEP] Setting up virtual environment...
 if not exist "venv\Scripts\python.exe" (
     python -m venv venv
     if %errorlevel% neq 0 (
-        echo ❌ Ошибка создания виртуального окружения
+        echo [ERROR] Failed to create virtual environment
         pause
         exit /b 1
     )
 )
 
-echo ✅ Виртуальное окружение создано
+echo [OK] Virtual environment created
 
-REM Активация и обновление pip
+REM Activate and update pip
 call venv\Scripts\activate
 python -m pip install --upgrade pip --quiet
 
-echo ✅ pip обновлен
+echo [OK] pip updated
 
-REM Установка зависимостей поэтапно
+REM Install dependencies step by step
 echo.
-echo 📦 Установка зависимостей...
+echo [STEP] Installing dependencies...
 
-echo   📊 Основные библиотеки...
+echo   [INFO] Core libraries...
 pip install --quiet requests beautifulsoup4 pandas numpy python-dotenv
 if %errorlevel% neq 0 (
-    echo ❌ Ошибка установки основных библиотек
+    echo [ERROR] Failed to install core libraries
     pause
     exit /b 1
 )
 
-echo   📁 Excel поддержка...
+echo   [INFO] Excel support...
 pip install --quiet openpyxl xlsxwriter
 if %errorlevel% neq 0 (
-    echo ❌ Ошибка установки Excel библиотек
+    echo [ERROR] Failed to install Excel libraries
     pause
     exit /b 1
 )
 
-echo   📺 YouTube библиотеки...
+echo   [INFO] YouTube libraries...
 pip install --quiet yt-dlp youtube-transcript-api google-api-python-client
 if %errorlevel% neq 0 (
-    echo ❌ Ошибка установки YouTube библиотек
+    echo [ERROR] Failed to install YouTube libraries
     pause
     exit /b 1
 )
 
-echo   🧠 NLP библиотеки...
+echo   [INFO] NLP libraries...
 pip install --quiet nltk spacy textstat
 if %errorlevel% neq 0 (
-    echo ❌ Ошибка установки NLP библиотек
+    echo [ERROR] Failed to install NLP libraries
     pause
     exit /b 1
 )
 
-echo   📈 Визуализация...
+echo   [INFO] Visualization...
 pip install --quiet matplotlib seaborn wordcloud plotly
 if %errorlevel% neq 0 (
-    echo ❌ Ошибка установки библиотек визуализации
+    echo [ERROR] Failed to install visualization libraries
     pause
     exit /b 1
 )
 
-echo   🛠️  Утилиты...
-pip install --quiet tqdm rich colorama diskcache fake-useragent
+echo   [INFO] Utilities...
+pip install --quiet tqdm rich colorama diskcache fake-useragent psutil
 if %errorlevel% neq 0 (
-    echo ❌ Ошибка установки утилит
+    echo [ERROR] Failed to install utilities
     pause
     exit /b 1
 )
 
-echo ✅ Все зависимости установлены
+echo [OK] All dependencies installed
 
-REM Загрузка языковых моделей
+REM Download language models
 echo.
-echo 🌍 Загрузка языковых моделей...
+echo [STEP] Downloading language models...
 
-echo   📝 NLTK данные...
+echo   [INFO] NLTK data...
 python -c "
 import nltk
 import ssl
@@ -182,75 +183,78 @@ except AttributeError:
 else:
     ssl._create_default_https_context = _create_unverified_https_context
 
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
-nltk.download('vader_lexicon', quiet=True)
-print('✅ NLTK данные загружены')
+try:
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    nltk.download('vader_lexicon', quiet=True)
+    print('[OK] NLTK data downloaded')
+except Exception as e:
+    print(f'[WARNING] NLTK download failed: {e}')
 "
 
-echo   🔤 spaCy модель...
+echo   [INFO] spaCy model...
 python -m spacy download ru_core_news_sm --quiet
 if %errorlevel% equ 0 (
-    echo ✅ spaCy модель загружена
+    echo [OK] spaCy model downloaded
 ) else (
-    echo ⚠️  spaCy модель не загружена (будет использован fallback)
+    echo [WARNING] spaCy model not downloaded ^(fallback will be used^)
 )
 
-REM Создание файлов конфигурации
+REM Create configuration files
 echo.
-echo ⚙️  Создание конфигурации...
+echo [STEP] Creating configuration...
 
-REM Создание .env файла
+REM Create .env file
 (
 echo # =============================================================================
-echo # YouTube Analyzer Configuration - Автоматически создано
+echo # YouTube Analyzer Configuration - Auto-generated
 echo # =============================================================================
 echo.
 echo # YouTube Data API v3 Key
-echo # Получить на: https://console.cloud.google.com/
+echo # Get from: https://console.cloud.google.com/
 echo YOUTUBE_API_KEY=
 echo.
-echo # Cookies файл для обхода ограничений
+echo # Cookies file for bypassing restrictions
 echo YOUTUBE_COOKIES_FILE=C:\youtube-analyzer\cookies.txt
 echo.
-echo # Прокси настройки ^(опционально^)
+echo # Proxy settings ^(optional^)
 echo HTTP_PROXY=
 echo HTTPS_PROXY=
 echo.
-echo # Лимиты анализа
+echo # Analysis limits
 echo MAX_TOTAL_VIDEOS=50
 echo MAX_CHANNELS_TO_ANALYZE=20
 echo MAX_VIDEOS_PER_KEYWORD=10
 echo.
-echo # Производительность
+echo # Performance
 echo MAX_WORKERS=4
 echo REQUEST_DELAY=2.0
 echo API_REQUEST_DELAY=1.0
 echo.
-echo # Функциональность
+echo # Functionality
 echo ENABLE_TRANSCRIPT_EXTRACTION=true
 echo ENABLE_CONTENT_ANALYSIS=true
 echo ENABLE_SENTIMENT_ANALYSIS=false
 echo.
-echo # Вывод
+echo # Output
 echo EXCEL_OUTPUT_ENABLED=true
 echo JSON_OUTPUT_ENABLED=false
 echo CHARTS_ENABLED=true
 echo.
-echo # Логирование
+echo # Logging
 echo LOG_LEVEL=INFO
 echo LOG_FILE=C:\youtube-analyzer\logs\youtube_analysis.log
 echo.
-echo # Кэширование
+echo # Caching
 echo ENABLE_CACHING=true
 echo CACHE_DURATION_HOURS=24
 ) > .env
 
-echo ✅ Базовая конфигурация .env создана
+echo [OK] Basic .env configuration created
 
-REM Создание .gitignore
+REM Create .gitignore
 (
-echo # Секретные данные
+echo # Secret data
 echo .env
 echo cookies.txt
 echo *.key
@@ -260,25 +264,25 @@ echo __pycache__/
 echo *.pyc
 echo venv/
 echo.
-echo # Логи и кэш
+echo # Logs and cache
 echo logs/
 echo .cache/
 echo *.log
 echo.
-echo # Временные файлы
+echo # Temporary files
 echo *.tmp
 echo .DS_Store
 echo Thumbs.db
 ) > .gitignore
 
-echo ✅ .gitignore создан
+echo [OK] .gitignore created
 
-REM Создание __init__.py файлов
+REM Create __init__.py files
 echo. > src\__init__.py
 echo. > templates\__init__.py  
 echo. > tests\__init__.py
 
-REM Создание requirements.txt
+REM Create requirements.txt
 (
 echo # YouTube Analyzer Requirements
 echo requests==2.31.0
@@ -301,42 +305,43 @@ echo rich==13.7.0
 echo colorama==0.4.6
 echo diskcache==5.6.3
 echo fake-useragent==1.4.0
+echo psutil==5.9.6
 ) > requirements.txt
 
-echo ✅ requirements.txt создан
+echo [OK] requirements.txt created
 
-REM Создание README файла
+REM Create README file
 (
-echo # YouTube Analyzer - Установлено успешно!
+echo # YouTube Analyzer - Successfully Installed!
 echo.
-echo ## 🚀 Быстрый запуск
+echo ## Quick Start
 echo.
-echo 1. Дважды кликните по файлу `БЫСТРЫЙ_СТАРТ.bat`
-echo 2. Выберите "Запустить анализ конкурентов"
-echo 3. Введите описание вашего продукта/услуги
-echo 4. Дождитесь результатов в папке `reports\`
+echo 1. Double-click `QUICK_START.bat`
+echo 2. Select "Run competitor analysis"
+echo 3. Enter your product/service description
+echo 4. Wait for results in `reports\` folder
 echo.
-echo ## ⚙️ Настройка
+echo ## Configuration
 echo.
-echo - Отредактируйте файл `.env` для продвинутых настроек
-echo - Добавьте YouTube API ключ для лучшей стабильности
-echo - Настройте cookies.txt при блокировках
+echo - Edit `.env` file for advanced settings
+echo - Add YouTube API key for better stability
+echo - Configure cookies.txt for bypassing blocks
 echo.
-echo ## 📁 Структура
+echo ## Structure
 echo.
-echo - `reports\` - Excel отчеты с результатами
-echo - `logs\` - логи выполнения
-echo - `data\` - промежуточные данные
-echo - `.env` - конфигурация
+echo - `reports\` - Excel reports with results
+echo - `logs\` - execution logs
+echo - `data\` - intermediate data
+echo - `.env` - configuration
 echo.
-echo Дата установки: %date% %time%
+echo Installation date: %date% %time%
 ) > README.md
 
-echo ✅ README.md создан
+echo [OK] README.md created
 
-REM Проверка установки
+REM Check installation
 echo.
-echo ✅ Проверка установки...
+echo [STEP] Checking installation...
 python -c "
 import sys
 print(f'Python: {sys.version}')
@@ -347,101 +352,110 @@ missing = []
 for pkg in packages:
     try:
         __import__(pkg.replace('-', '_'))
-        print(f'✅ {pkg}')
+        print(f'[OK] {pkg}')
     except ImportError:
         missing.append(pkg)
-        print(f'❌ {pkg}')
+        print(f'[ERROR] {pkg}')
 
 if not missing:
-    print('\\n🎉 Все компоненты установлены успешно!')
+    print('')
+    print('[SUCCESS] All components installed successfully!')
 else:
-    print(f'\\n⚠️ Отсутствуют: {missing}')
+    print(f'')
+    print(f'[WARNING] Missing: {missing}')
 "
 
-REM Создание ярлыка на рабочем столе
+REM Create desktop shortcut
 echo.
-echo 🖥️  Создание ярлыка на рабочем столе...
+echo [STEP] Creating desktop shortcut...
 powershell -Command "
-$WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut('%USERPROFILE%\Desktop\YouTube Analyzer.lnk')
-$Shortcut.TargetPath = 'C:\youtube-analyzer\БЫСТРЫЙ_СТАРТ.bat'
-$Shortcut.WorkingDirectory = 'C:\youtube-analyzer'
-$Shortcut.Description = 'YouTube Competitor Analysis Tool'
-$Shortcut.Save()
+try {
+    $WshShell = New-Object -comObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut('%USERPROFILE%\Desktop\YouTube Analyzer.lnk')
+    $Shortcut.TargetPath = 'C:\youtube-analyzer\QUICK_START.bat'
+    $Shortcut.WorkingDirectory = 'C:\youtube-analyzer'
+    $Shortcut.Description = 'YouTube Competitor Analysis Tool'
+    $Shortcut.Save()
+    Write-Host '[OK] Desktop shortcut created'
+} catch {
+    Write-Host '[WARNING] Could not create shortcut'
+}
 "
 
-if %errorlevel% equ 0 (
-    echo ✅ Ярлык создан на рабочем столе
-) else (
-    echo ⚠️  Не удалось создать ярлык
-)
-
-REM Регистрация в меню Пуск
+REM Register in Start Menu
 echo.
-echo 📋 Регистрация в меню Пуск...
+echo [STEP] Registering in Start Menu...
 mkdir "%APPDATA%\Microsoft\Windows\Start Menu\Programs\YouTube Analyzer" 2>nul
 powershell -Command "
-$WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut('%APPDATA%\Microsoft\Windows\Start Menu\Programs\YouTube Analyzer\YouTube Analyzer.lnk')
-$Shortcut.TargetPath = 'C:\youtube-analyzer\БЫСТРЫЙ_СТАРТ.bat'
-$Shortcut.WorkingDirectory = 'C:\youtube-analyzer'
-$Shortcut.Save()
+try {
+    $WshShell = New-Object -comObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut('%APPDATA%\Microsoft\Windows\Start Menu\Programs\YouTube Analyzer\YouTube Analyzer.lnk')
+    $Shortcut.TargetPath = 'C:\youtube-analyzer\QUICK_START.bat'
+    $Shortcut.WorkingDirectory = 'C:\youtube-analyzer'
+    $Shortcut.Save()
+    Write-Host '[OK] Added to Start Menu'
+} catch {
+    Write-Host '[WARNING] Could not register in Start Menu'
+}
 "
 
-echo ✅ Добавлено в меню Пуск
+echo.
+echo ===============================================================================
+echo [SUCCESS] INSTALLATION COMPLETED SUCCESSFULLY!
+echo ===============================================================================
+echo.
+echo YouTube Analyzer is ready to use!
+echo.
+echo Location: C:\youtube-analyzer\
+echo Launch: Desktop shortcut or Start Menu
+echo Configuration: .env file
+echo Documentation: README.md
+echo.
+echo NEXT STEPS:
+echo.
+echo 1. RECOMMENDED: Get YouTube API key
+echo    - Go to https://console.cloud.google.com/
+echo    - Enable YouTube Data API v3
+echo    - Create API Key
+echo    - Add to .env file: YOUTUBE_API_KEY=your_key
+echo.
+echo 2. For access issues: Configure cookies
+echo    - Install "Get cookies.txt" browser extension
+echo    - Export cookies from youtube.com
+echo    - Save as C:\youtube-analyzer\cookies.txt
+echo.
+echo 3. START ANALYSIS:
+echo    - Double-click "YouTube Analyzer" desktop shortcut
+echo    - OR run QUICK_START.bat
+echo    - OR find in Start Menu
+echo.
+echo Results will be saved in C:\youtube-analyzer\reports\
+echo.
+echo ===============================================================================
+echo.
+echo USEFUL COMMANDS:
+echo.
+echo Run analysis:     QUICK_START.bat
+echo Settings:         notepad .env
+echo View reports:     explorer reports
+echo Logs:             type logs\youtube_analysis.log
+echo Update:           pip install --upgrade -r requirements.txt
+echo.
+echo ===============================================================================
 
+REM Offer to launch immediately
 echo.
-echo =============================================================================
-echo 🎉 УСТАНОВКА ЗАВЕРШЕНА УСПЕШНО!
-echo =============================================================================
-echo.
-echo 📊 YouTube Analyzer готов к работе!
-echo.
-echo 📁 Местоположение: C:\youtube-analyzer\
-echo 🚀 Запуск: Ярлык на рабочем столе или меню Пуск
-echo ⚙️  Конфигурация: .env файл
-echo 📋 Документация: README.md
-echo.
-echo 🎯 СЛЕДУЮЩИЕ ШАГИ:
-echo.
-echo 1. 🔑 РЕКОМЕНДУЕТСЯ: Получить YouTube API ключ
-echo    • Перейдите на https://console.cloud.google.com/
-echo    • Включите YouTube Data API v3
-echo    • Создайте API Key
-echo    • Добавьте в .env файл: YOUTUBE_API_KEY=ваш_ключ
-echo.
-echo 2. 🍪 При проблемах с доступом: Настроить cookies
-echo    • Установите расширение "Get cookies.txt"
-echo    • Экспортируйте cookies с youtube.com
-echo    • Сохраните как C:\youtube-analyzer\cookies.txt
-echo.
-echo 3. 🚀 ЗАПУСК АНАЛИЗА:
-echo    • Дважды кликните ярлык "YouTube Analyzer" на рабочем столе
-echo    • ИЛИ запустите БЫСТРЫЙ_СТАРТ.bat
-echo    • ИЛИ найдите в меню Пуск
-echo.
-echo 📊 Результаты анализа будут сохранены в C:\youtube-analyzer\reports\
-echo.
-echo =============================================================================
-echo.
-echo 💡 ПОЛЕЗНЫЕ КОМАНДЫ:
-echo.
-echo Запуск анализа:     БЫСТРЫЙ_СТАРТ.bat
-echo Настройки:          notepad .env
-echo Просмотр отчетов:   explorer reports
-echo Логи:               type logs\youtube_analysis.log
-echo Обновление:         pip install --upgrade -r requirements.txt
-echo.
-echo =============================================================================
-
-REM Предложение сразу запустить
-echo.
-set /p launch="🚀 Запустить YouTube Analyzer сейчас? (y/n): "
+set /p launch="Launch YouTube Analyzer now? (y/n): "
 if /i "%launch%"=="y" (
-    start "" "БЫСТРЫЙ_СТАРТ.bat"
+    if exist "QUICK_START.bat" (
+        start "" "QUICK_START.bat"
+    ) else (
+        echo [WARNING] QUICK_START.bat not found
+        echo Please download all project files from GitHub
+    )
 )
 
 echo.
-echo 🎉 Установка завершена! Добро пожаловать в YouTube Analyzer!
+echo [SUCCESS] Installation complete! Welcome to YouTube Analyzer!
 echo.
 pause

@@ -1,180 +1,19 @@
-# YouTube Analyzer - Git Ignore Rules
-
-# ============ СЕКРЕТНЫЕ ДАННЫЕ ============
-# НИКОГДА не коммитить эти файлы!
+# Secret data
 .env
-config.json
-youtube_cookies.txt
-*.pem
+cookies.txt
 *.key
-*secret*
-*api_key*
-_oldarchive/
 
-# ============ PYTHON ============
-# Виртуальное окружение
-venv/
-env/
-.venv/
-.env/
-
-# Кэш Python
+# Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+venv/
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-
-# ============ БАЗА ДАННЫХ ============
-# SQLite базы данных (содержат приватные данные)
-*.db
-*.sqlite
-*.sqlite3
-youtube_data.db
-*.db-journal
-
-# Резервные копии БД
-backups/
-*.backup
-*.bak
-
-# ============ ВРЕМЕННЫЕ ФАЙЛЫ ============
-# Временные файлы для Whisper/yt-dlp
-temp/
-tmp/
-*.tmp
-*.temp
-
-# Загруженные аудио/видео файлы
-*.mp4
-*.mp3
-*.wav
-*.webm
-*.m4a
-
-# Кэш
-cache/
-.cache/
-*.cache
-
-# ============ ЭКСПОРТЫ И ОТЧЕТЫ ============
-# Excel файлы с результатами анализа
-exports/
-*.xlsx
-*.xls
-youtube_analysis_*.xlsx
-
-# CSV экспорты
-*.csv
-
-# Логи
+# Logs and cache
 logs/
+.cache/
 *.log
-*.log.*
 
-# ============ IDE И РЕДАКТОРЫ ============
-# VS Code
-.vscode/
-*.code-workspace
-
-# PyCharm
-.idea/
-*.iml
-*.iws
-
-# Sublime Text
-*.sublime-project
-*.sublime-workspace
-
-# Vim
-*.swp
-*.swo
-*~
-
-# Emacs
-*~
-\#*\#
-/.emacs.desktop
-/.emacs.desktop.lock
-*.elc
-
-# ============ ОПЕРАЦИОННАЯ СИСТЕМА ============
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-
-# macOS
+# Temporary files
+*.tmp
 .DS_Store
-.AppleDouble
-.LSOverride
-Icon?
-._*
-.Spotlight-V100
-.Trashes
-
-# Linux
-*~
-.nfs*
-
-# ============ РАЗРАБОТКА ============
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pytest
-.pytest_cache/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# ============ ДОПУСТИМЫЕ ФАЙЛЫ ============
-# Эти файлы МОЖНО коммитить:
-# - Исходный код Python (*.py)
-# - HTML/CSS/JS файлы
-# - README.md и документация
-# - requirements.txt
-# - .env.example (пример конфигурации без секретов)
-# - config.json.example
-# - Пустую структуру БД (без данных)
-
-# ============ ПРИМЕРЫ КОНФИГУРАЦИИ ============
-# Примеры конфигурации МОЖНО коммитить
-!.env.example
-!config.json.example
-!database_schema.sql
+Thumbs.db
