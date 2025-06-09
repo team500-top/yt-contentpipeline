@@ -19,6 +19,7 @@ import requests
 from diskcache import Cache
 
 from config import config, validate_config
+from security import safe_requests
 
 def setup_logging(level: str = None, log_file: str = None) -> logging.Logger:
     """Настройка системы логирования"""
@@ -273,7 +274,7 @@ def safe_request(url: str, **kwargs) -> Optional[requests.Response]:
     request_kwargs = {**default_kwargs, **kwargs}
     
     try:
-        response = requests.get(url, **request_kwargs)
+        response = safe_requests.get(url, **request_kwargs)
         response.raise_for_status()
         return response
     except requests.exceptions.RequestException as e:
