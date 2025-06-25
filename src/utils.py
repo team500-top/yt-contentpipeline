@@ -19,6 +19,7 @@ import requests
 from diskcache import Cache
 
 from config import config, validate_config
+import fickling
 
 def setup_logging(level: str = None, log_file: str = None) -> logging.Logger:
     """Настройка системы логирования"""
@@ -347,7 +348,7 @@ def load_pickle(filepath: Union[str, Path]) -> Optional[Any]:
             return None
         
         with open(filepath, 'rb') as f:
-            data = pickle.load(f)
+            data = fickling.load(f)
         
         logger.debug(f"Pickle загружен: {filepath}")
         return data
